@@ -24,31 +24,29 @@ MCPServer class >> onPort: aPort [
 ]
 
 { #category : 'private' }
-MCPServer >> handleRequest: request [
-	"Functional delegate protocol (ZnServer returns this value)"
-	| response |
-	response := ZnResponse new.
-	self handleRequest: request into: response.
-	^ response
-]
-
-{ #category : 'private' }
-MCPServer >> handleRequest: request into: response [
-	"Service delegate protocol (ZnServer passes response to modify in place)"
-	| body result |
-	response headers
+MCPServer >> addCorsHeadersTo: aResponse [
+	aResponse headers
 		at: 'Access-Control-Allow-Origin' put: '*';
 		at: 'Access-Control-Allow-Methods' put: 'POST, OPTIONS';
 		at: 'Access-Control-Allow-Headers' put: 'Content-Type, Accept'.
+	^ aResponse
+]
+
+{ #category : 'private' }
+MCPServer >> handleRequest: request [
+	"Functional delegate protocol — ZnServer uses the returned ZnResponse"
+	| body result |
 
 	request method = 'OPTIONS' ifTrue: [
-		response status: 200.
-		^ self ].
+		^ self addCorsHeadersTo: (ZnResponse new
+			statusLine: ZnStatusLine ok;
+			yourself) ].
 
 	request method ~= 'POST' ifTrue: [
-		response status: 405.
-		response entity: (ZnEntity text: 'Method Not Allowed').
-		^ self ].
+		^ self addCorsHeadersTo: (ZnResponse new
+			statusLine: (ZnStatusLine code: 405 text: 'Method Not Allowed');
+			entity: (ZnEntity text: 'Method Not Allowed');
+			yourself) ].
 
 	body := (request hasEntity and: [ request entity notNil ])
 		ifTrue: [ request entity string ]
@@ -66,14 +64,28 @@ MCPServer >> handleRequest: request into: response [
 					yourself);
 				yourself) ].
 
-	result
-		ifNil: [ response status: 200 ]
+	^ self addCorsHeadersTo: (result
+		ifNil: [
+			ZnResponse new
+				statusLine: ZnStatusLine ok;
+				yourself ]
 		ifNotNil: [
-			response
-				status: 200;
-				entity: (ZnEntity
-					with: result
-					type: ZnMimeType applicationJson) ]
+			ZnResponse ok: (ZnEntity
+				with: result
+				type: ZnMimeType applicationJson) ])
+]
+
+{ #category : 'private' }
+MCPServer >> handleRequest: request into: response [
+	"Service delegate protocol — ZnServer passes response to modify in place"
+	| built |
+	built := self handleRequest: request.
+	response statusLine: built statusLine.
+	response headers
+		at: 'Access-Control-Allow-Origin' put: '*';
+		at: 'Access-Control-Allow-Methods' put: 'POST, OPTIONS';
+		at: 'Access-Control-Allow-Headers' put: 'Content-Type, Accept'.
+	built entity ifNotNil: [ :e | response entity: e ]
 ]
 
 { #category : 'initialization' }
@@ -113,7 +125,7 @@ MCPServer >> start [
 	httpServer := ZnServer on: port.
 	httpServer delegate: self.
 	httpServer start.
-	Transcript show: 'PharoMCP running on http://localhost:' , port printString.
+	Transcript show: 'PharoMCP running on http://localhost:' , port printString; cr
 ]
 
 { #category : 'control' }
@@ -122,5 +134,5 @@ MCPServer >> stop [
 	s := httpServer.
 	httpServer := nil.
 	s ifNotNil: [ s stop ].
-	Transcript show: 'PharoMCP stopped'; nl
+	Transcript show: 'PharoMCP stopped'; cr
 ]
