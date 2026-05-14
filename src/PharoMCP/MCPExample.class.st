@@ -21,6 +21,7 @@ Register the server with Claude Code (run once in a terminal):
 If Claude Code runs inside a container and Pharo runs on the host, use the
 host gateway address instead of 127.0.0.1:
 
+    claude mcp remove pharo
     claude mcp add --transport http pharo http://host.docker.internal:7777/
 
 Verify the connection inside a Claude Code session with /mcp.
