@@ -1,41 +1,15 @@
 Class {
-	#name : #MCPRequestProcessor,
-	#superclass : #Object,
-	#instVars : [ 'tools' ],
-	#category : #'PharoMCP-Core'
+	#name : 'MCPRequestProcessor',
+	#superclass : 'Object',
+	#instVars : [
+		'tools'
+	],
+	#category : 'PharoMCP-Core',
+	#package : 'PharoMCP',
+	#tag : 'Core'
 }
 
-{ #category : #initialization }
-MCPRequestProcessor >> initialize [
-	tools := Dictionary new
-]
-
-{ #category : #'tool management' }
-MCPRequestProcessor >> registerTool: aTool [
-	tools at: aTool name put: aTool
-]
-
-{ #category : #accessing }
-MCPRequestProcessor >> tools [
-	^ tools
-]
-
-{ #category : #processing }
-MCPRequestProcessor >> processRawRequest: jsonString [
-	| request |
-	request := [ NeoJSONReader fromString: jsonString ]
-		on: Error
-		do: [ :e |
-			^ self
-				errorResponseWithId: nil
-				code: -32700
-				message: 'Parse error' ].
-	(request isKindOf: Dictionary) ifFalse: [
-		^ self errorResponseWithId: nil code: -32600 message: 'Invalid Request' ].
-	^ self dispatchRequest: request
-]
-
-{ #category : #processing }
+{ #category : 'processing' }
 MCPRequestProcessor >> dispatchRequest: request [
 	| method id params |
 	id := request at: 'id' ifAbsent: [ nil ].
@@ -53,7 +27,19 @@ MCPRequestProcessor >> dispatchRequest: request [
 	^ self errorResponseWithId: id code: -32601 message: 'Method not found: ' , method
 ]
 
-{ #category : #handlers }
+{ #category : 'response building' }
+MCPRequestProcessor >> errorResponseWithId: id code: code message: msg [
+	^ NeoJSONWriter toString: (Dictionary new
+		at: 'jsonrpc' put: '2.0';
+		at: 'id' put: id;
+		at: 'error' put: (Dictionary new
+			at: 'code' put: code;
+			at: 'message' put: msg;
+			yourself);
+		yourself)
+]
+
+{ #category : 'handlers' }
 MCPRequestProcessor >> handleInitialize: params id: id [
 	^ self
 		successResponseWithResult: (Dictionary new
@@ -69,18 +55,7 @@ MCPRequestProcessor >> handleInitialize: params id: id [
 		id: id
 ]
 
-{ #category : #handlers }
-MCPRequestProcessor >> handleToolsList: params id: id [
-	| toolList |
-	toolList := tools values collect: [ :t | t asDictionary ].
-	^ self
-		successResponseWithResult: (Dictionary new
-			at: 'tools' put: toolList asArray;
-			yourself)
-		id: id
-]
-
-{ #category : #handlers }
+{ #category : 'handlers' }
 MCPRequestProcessor >> handleToolsCall: params id: id [
 	| toolName args tool resultText isError |
 	toolName := params at: 'name' ifAbsent: [
@@ -111,7 +86,43 @@ MCPRequestProcessor >> handleToolsCall: params id: id [
 		id: id
 ]
 
-{ #category : #'response building' }
+{ #category : 'handlers' }
+MCPRequestProcessor >> handleToolsList: params id: id [
+	| toolList |
+	toolList := tools values collect: [ :t | t asDictionary ].
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'tools' put: toolList asArray;
+			yourself)
+		id: id
+]
+
+{ #category : 'initialization' }
+MCPRequestProcessor >> initialize [
+	tools := Dictionary new
+]
+
+{ #category : 'processing' }
+MCPRequestProcessor >> processRawRequest: jsonString [
+	| request |
+	request := [ NeoJSONReader fromString: jsonString ]
+		on: Error
+		do: [ :e |
+			^ self
+				errorResponseWithId: nil
+				code: -32700
+				message: 'Parse error' ].
+	(request isKindOf: Dictionary) ifFalse: [
+		^ self errorResponseWithId: nil code: -32600 message: 'Invalid Request' ].
+	^ self dispatchRequest: request
+]
+
+{ #category : 'tool management' }
+MCPRequestProcessor >> registerTool: aTool [
+	tools at: aTool name put: aTool
+]
+
+{ #category : 'response building' }
 MCPRequestProcessor >> successResponseWithResult: result id: id [
 	^ NeoJSONWriter toString: (Dictionary new
 		at: 'jsonrpc' put: '2.0';
@@ -120,14 +131,7 @@ MCPRequestProcessor >> successResponseWithResult: result id: id [
 		yourself)
 ]
 
-{ #category : #'response building' }
-MCPRequestProcessor >> errorResponseWithId: id code: code message: msg [
-	^ NeoJSONWriter toString: (Dictionary new
-		at: 'jsonrpc' put: '2.0';
-		at: 'id' put: id;
-		at: 'error' put: (Dictionary new
-			at: 'code' put: code;
-			at: 'message' put: msg;
-			yourself);
-		yourself)
+{ #category : 'accessing' }
+MCPRequestProcessor >> tools [
+	^ tools
 ]

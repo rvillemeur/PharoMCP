@@ -1,1 +1,1 @@
-Package { #name : #'PharoMCP' }
+Package { #name : 'PharoMCP' }

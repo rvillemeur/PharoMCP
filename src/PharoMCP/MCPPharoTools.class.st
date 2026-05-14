@@ -1,15 +1,12 @@
 Class {
-	#name : #MCPPharoTools,
-	#superclass : #Object,
-	#category : #'PharoMCP-Core'
+	#name : 'MCPPharoTools',
+	#superclass : 'Object',
+	#category : 'PharoMCP-Core',
+	#package : 'PharoMCP',
+	#tag : 'Core'
 }
 
-{ #category : #registration }
-MCPPharoTools class >> registerToolsWith: aProcessor [
-	self allTools do: [ :tool | aProcessor registerTool: tool ]
-]
-
-{ #category : #tools }
+{ #category : 'tools' }
 MCPPharoTools class >> allTools [
 	^ Array
 		with: self evaluateTool
@@ -19,7 +16,30 @@ MCPPharoTools class >> allTools [
 		with: self listMethodsTool
 ]
 
-{ #category : #tools }
+{ #category : 'tools' }
+MCPPharoTools class >> classDefinitionTool [
+	^ MCPTool
+		name: 'class_definition'
+		description: 'Get the definition of a Pharo class including its superclass, instance variables, and package.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'className' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Exact name of the class';
+					yourself);
+				yourself);
+			at: 'required' put: #('className');
+			yourself)
+		handler: [ :args |
+			| className class |
+			className := args at: 'className' ifAbsent: [ ^ 'Error: missing className' ].
+			class := Smalltalk globals at: className asSymbol ifAbsent: [
+				^ 'Error: class not found: ' , className ].
+			class definition ]
+]
+
+{ #category : 'tools' }
 MCPPharoTools class >> evaluateTool [
 	^ MCPTool
 		name: 'evaluate_pharo'
@@ -43,7 +63,7 @@ MCPPharoTools class >> evaluateTool [
 			result printString ]
 ]
 
-{ #category : #tools }
+{ #category : 'tools' }
 MCPPharoTools class >> listClassesTool [
 	^ MCPTool
 		name: 'list_classes'
@@ -79,30 +99,42 @@ MCPPharoTools class >> listClassesTool [
 						limited do: [ :c | s nextPutAll: c name ] separatedBy: [ s nextPut: Character lf ] ]) ] ]
 ]
 
-{ #category : #tools }
-MCPPharoTools class >> classDefinitionTool [
+{ #category : 'tools' }
+MCPPharoTools class >> listMethodsTool [
 	^ MCPTool
-		name: 'class_definition'
-		description: 'Get the definition of a Pharo class including its superclass, instance variables, and package.'
+		name: 'list_methods'
+		description: 'List all method selectors defined on a class. Use side "class" for class-side methods.'
 		schema: (Dictionary new
 			at: 'type' put: 'object';
 			at: 'properties' put: (Dictionary new
 				at: 'className' put: (Dictionary new
 					at: 'type' put: 'string';
-					at: 'description' put: 'Exact name of the class';
+					at: 'description' put: 'Name of the class';
+					yourself);
+				at: 'side' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'enum' put: #('instance' 'class');
+					at: 'description' put: 'Whether to list instance-side or class-side methods. Defaults to instance.';
 					yourself);
 				yourself);
 			at: 'required' put: #('className');
 			yourself)
 		handler: [ :args |
-			| className class |
+			| className class selectors |
 			className := args at: 'className' ifAbsent: [ ^ 'Error: missing className' ].
 			class := Smalltalk globals at: className asSymbol ifAbsent: [
 				^ 'Error: class not found: ' , className ].
-			class definition ]
+			(args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
+				ifTrue: [ class := class class ].
+			selectors := class methodDictionary keys asSortedCollection.
+			selectors isEmpty
+				ifTrue: [ 'No methods defined on ' , class name ]
+				ifFalse: [
+					String streamContents: [ :s |
+						selectors do: [ :sel | s nextPutAll: sel ] separatedBy: [ s nextPut: Character lf ] ] ] ]
 ]
 
-{ #category : #tools }
+{ #category : 'tools' }
 MCPPharoTools class >> methodSourceTool [
 	^ MCPTool
 		name: 'method_source'
@@ -140,37 +172,7 @@ MCPPharoTools class >> methodSourceTool [
 			method sourceCode ]
 ]
 
-{ #category : #tools }
-MCPPharoTools class >> listMethodsTool [
-	^ MCPTool
-		name: 'list_methods'
-		description: 'List all method selectors defined on a class. Use side "class" for class-side methods.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'className' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Whether to list instance-side or class-side methods. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #('className');
-			yourself)
-		handler: [ :args |
-			| className class selectors |
-			className := args at: 'className' ifAbsent: [ ^ 'Error: missing className' ].
-			class := Smalltalk globals at: className asSymbol ifAbsent: [
-				^ 'Error: class not found: ' , className ].
-			(args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
-				ifTrue: [ class := class class ].
-			selectors := class methodDictionary keys asSortedCollection.
-			selectors isEmpty
-				ifTrue: [ 'No methods defined on ' , class name ]
-				ifFalse: [
-					String streamContents: [ :s |
-						selectors do: [ :sel | s nextPutAll: sel ] separatedBy: [ s nextPut: Character lf ] ] ] ]
+{ #category : 'registration' }
+MCPPharoTools class >> registerToolsWith: aProcessor [
+	self allTools do: [ :tool | aProcessor registerTool: tool ]
 ]
