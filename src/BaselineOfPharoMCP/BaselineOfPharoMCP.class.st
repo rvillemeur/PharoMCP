@@ -5,7 +5,7 @@ Class {
 	#package : 'BaselineOfPharoMCP'
 }
 
-{ #category : 'baseline' }
+{ #category : 'baselines' }
 BaselineOfPharoMCP >> baseline: spec [
 	<baseline>
 	spec for: #common do: [
@@ -13,8 +13,6 @@ BaselineOfPharoMCP >> baseline: spec [
 			with: [ spec repository: 'github://svenvc/NeoJSON/repository' ].
 		spec
 			package: 'PharoMCP'
-				with: [ spec requires: #('NeoJSON') ];
-			package: 'PharoMCP-Tests'
-				with: [ spec requires: #('PharoMCP') ]
+				with: [ spec requires: #('NeoJSON') ]
 	]
 ]
