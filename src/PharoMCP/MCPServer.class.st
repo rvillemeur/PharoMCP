@@ -1,3 +1,22 @@
+"
+HTTP server that exposes the Pharo image as an MCP (Model Context Protocol) endpoint.
+
+Owns a ZnServer and acts as its delegate, routing JSON-RPC 2.0 POST requests to an MCPRequestProcessor. Implements both Zinc delegate protocols for compatibility:
+- handleRequest: aRequest  (functional, returns ZnResponse)
+- handleRequest: aRequest into: aResponse  (service, modifies in place)
+
+Usage:
+    | s |
+    s := MCPServer onPort: 7777.
+    s start.
+    Smalltalk at: #PharoMCPServer put: s.
+
+Key methods:
+- default / onPort:     creation
+- start / stop          lifecycle
+- registerTool:         add custom MCPTool at runtime
+- processor             access the MCPRequestProcessor
+"
 Class {
 	#name : 'MCPServer',
 	#superclass : 'Object',

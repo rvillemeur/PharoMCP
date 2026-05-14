@@ -1,3 +1,15 @@
+"
+JSON-RPC 2.0 dispatcher for the MCP protocol.
+
+Parses raw JSON strings, routes method calls to handlers, and manages a registry of MCPTool instances (keyed by name). Created and owned by MCPServer.
+
+Supported methods:
+- initialize       returns protocol version and server capabilities
+- tools/list       returns all registered tool descriptors
+- tools/call       invokes a named tool with arguments
+
+Notifications (requests without an id) return nil — no response is sent, per JSON-RPC 2.0 spec. All errors are returned as JSON-RPC error response objects with standard codes (-32700 parse, -32600 invalid, -32601 not found, -32602 invalid params, -32603 internal).
+"
 Class {
 	#name : 'MCPRequestProcessor',
 	#superclass : 'Object',

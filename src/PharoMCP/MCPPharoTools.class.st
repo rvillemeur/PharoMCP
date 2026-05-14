@@ -1,3 +1,15 @@
+"
+Factory for the built-in Pharo image introspection tools.
+
+All methods are class-side. Registered automatically during MCPServer initialization via registerToolsWith: aProcessor. Add a new tool by implementing a new class-side factory method and including it in allTools.
+
+Provided tools:
+- evaluate_pharo      evaluate arbitrary Pharo code, returns printString of result
+- list_classes        search classes by name pattern (case-insensitive, max 50)
+- class_definition    return definitionString of a named class
+- method_source       return source code of a named method (instance or class side)
+- list_methods        list all selectors on a class (instance or class side)
+"
 Class {
 	#name : 'MCPPharoTools',
 	#superclass : 'Object',
@@ -36,7 +48,7 @@ MCPPharoTools class >> classDefinitionTool [
 				ifPresent: [ :className |
 					Smalltalk globals
 						at: className asSymbol
-						ifPresent: [ :class | class definition ]
+						ifPresent: [ :class | class definitionString ]
 						ifAbsent: [ 'Error: class not found: ' , className ] ]
 				ifAbsent: [ 'Error: missing className' ] ]
 ]
