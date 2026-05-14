@@ -113,7 +113,7 @@ MCPServer >> start [
 	httpServer := ZnServer on: port.
 	httpServer delegate: self.
 	httpServer start.
-	Transcript show: 'PharoMCP running on http://localhost:' , port printString; nl
+	Transcript show: 'PharoMCP running on http://localhost:' , port printString.
 ]
 
 { #category : 'control' }
