@@ -1,1 +1,1 @@
-Package { #name : #'PharoMCP-Tests' }
+Package { #name : 'PharoMCP-Tests' }

@@ -1,11 +1,29 @@
 Class {
-	#name : #MCPRequestProcessorTest,
-	#superclass : #TestCase,
-	#instVars : [ 'processor' ],
-	#category : #'PharoMCP-Tests'
+	#name : 'MCPRequestProcessorTest',
+	#superclass : 'TestCase',
+	#instVars : [
+		'processor'
+	],
+	#category : 'PharoMCP-Tests',
+	#package : 'PharoMCP-Tests'
 }
 
-{ #category : #running }
+{ #category : 'helpers' }
+MCPRequestProcessorTest >> parse: jsonString [
+	^ NeoJSONReader fromString: jsonString
+]
+
+{ #category : 'helpers' }
+MCPRequestProcessorTest >> request: method id: id params: params [
+	^ NeoJSONWriter toString: (Dictionary new
+		at: 'jsonrpc' put: '2.0';
+		at: 'id' put: id;
+		at: 'method' put: method;
+		at: 'params' put: params;
+		yourself)
+]
+
+{ #category : 'running' }
 MCPRequestProcessorTest >> setUp [
 	processor := MCPRequestProcessor new.
 	processor registerTool: (MCPTool
@@ -20,22 +38,26 @@ MCPRequestProcessorTest >> setUp [
 		handler: [ :args | ((args at: 'a') + (args at: 'b')) printString ])
 ]
 
-{ #category : #'helpers' }
-MCPRequestProcessorTest >> parse: jsonString [
-	^ NeoJSONReader fromString: jsonString
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testInitializeCapabilitiesIncludeTools [
+	| response result |
+	response := processor processRawRequest:
+		(self request: 'initialize' id: 1 params: Dictionary new).
+	result := (self parse: response) at: 'result'.
+	self assert: ((result at: 'capabilities') includesKey: 'tools')
 ]
 
-{ #category : #'helpers' }
-MCPRequestProcessorTest >> request: method id: id params: params [
-	^ NeoJSONWriter toString: (Dictionary new
-		at: 'jsonrpc' put: '2.0';
-		at: 'id' put: id;
-		at: 'method' put: method;
-		at: 'params' put: params;
-		yourself)
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testInitializeResponseHasCorrectId [
+	| response dict |
+	response := processor processRawRequest:
+		(self request: 'initialize' id: 42 params: Dictionary new).
+	dict := self parse: response.
+	self assert: (dict at: 'id') equals: 42.
+	self assert: (dict at: 'jsonrpc') equals: '2.0'
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 MCPRequestProcessorTest >> testInitializeReturnsProtocolVersion [
 	| response result |
 	response := processor processRawRequest:
@@ -48,7 +70,7 @@ MCPRequestProcessorTest >> testInitializeReturnsProtocolVersion [
 	self assert: (result at: 'protocolVersion') equals: '2024-11-05'
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 MCPRequestProcessorTest >> testInitializeReturnsServerInfo [
 	| response result serverInfo |
 	response := processor processRawRequest:
@@ -59,100 +81,19 @@ MCPRequestProcessorTest >> testInitializeReturnsServerInfo [
 	self assert: (serverInfo includesKey: 'version')
 ]
 
-{ #category : #tests }
-MCPRequestProcessorTest >> testInitializeResponseHasCorrectId [
-	| response dict |
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testNotificationReturnsNil [
+	| response |
 	response := processor processRawRequest:
-		(self request: 'initialize' id: 42 params: Dictionary new).
-	dict := self parse: response.
-	self assert: (dict at: 'id') equals: 42.
-	self assert: (dict at: 'jsonrpc') equals: '2.0'
-]
-
-{ #category : #tests }
-MCPRequestProcessorTest >> testInitializeCapabilitiesIncludeTools [
-	| response result |
-	response := processor processRawRequest:
-		(self request: 'initialize' id: 1 params: Dictionary new).
-	result := (self parse: response) at: 'result'.
-	self assert: ((result at: 'capabilities') includesKey: 'tools')
-]
-
-{ #category : #tests }
-MCPRequestProcessorTest >> testToolsListReturnsAllRegisteredTools [
-	| response tools |
-	response := processor processRawRequest:
-		(self request: 'tools/list' id: 2 params: Dictionary new).
-	tools := ((self parse: response) at: 'result') at: 'tools'.
-	self assert: tools size equals: 2
-]
-
-{ #category : #tests }
-MCPRequestProcessorTest >> testToolsListToolHasRequiredFields [
-	| response tools firstTool |
-	response := processor processRawRequest:
-		(self request: 'tools/list' id: 2 params: Dictionary new).
-	tools := ((self parse: response) at: 'result') at: 'tools'.
-	firstTool := tools detect: [ :t | (t at: 'name') = 'echo' ].
-	self assert: (firstTool includesKey: 'name').
-	self assert: (firstTool includesKey: 'description').
-	self assert: (firstTool includesKey: 'inputSchema')
-]
-
-{ #category : #tests }
-MCPRequestProcessorTest >> testToolsCallReturnsTextContent [
-	| response result content |
-	response := processor processRawRequest:
-		(self request: 'tools/call' id: 3 params: (Dictionary new
-			at: 'name' put: 'echo';
-			at: 'arguments' put: (Dictionary new at: 'text' put: 'hello world'; yourself);
+		(NeoJSONWriter toString: (Dictionary new
+			at: 'jsonrpc' put: '2.0';
+			at: 'method' put: 'notifications/initialized';
+			at: 'params' put: Dictionary new;
 			yourself)).
-	result := (self parse: response) at: 'result'.
-	content := result at: 'content'.
-	self assert: content isArray.
-	self assert: content size equals: 1.
-	self assert: ((content first) at: 'type') equals: 'text'.
-	self assert: ((content first) at: 'text') equals: 'hello world'
+	self assert: response isNil
 ]
 
-{ #category : #tests }
-MCPRequestProcessorTest >> testToolsCallIsErrorFalseOnSuccess [
-	| response result |
-	response := processor processRawRequest:
-		(self request: 'tools/call' id: 3 params: (Dictionary new
-			at: 'name' put: 'echo';
-			at: 'arguments' put: (Dictionary new at: 'text' put: 'hi'; yourself);
-			yourself)).
-	result := (self parse: response) at: 'result'.
-	self deny: (result at: 'isError')
-]
-
-{ #category : #tests }
-MCPRequestProcessorTest >> testToolsCallWithArithmeticTool [
-	| response result content |
-	response := processor processRawRequest:
-		(self request: 'tools/call' id: 4 params: (Dictionary new
-			at: 'name' put: 'add';
-			at: 'arguments' put: (Dictionary new
-				at: 'a' put: 10;
-				at: 'b' put: 32;
-				yourself);
-			yourself)).
-	result := (self parse: response) at: 'result'.
-	content := (result at: 'content') first.
-	self assert: (content at: 'text') equals: '42'
-]
-
-{ #category : #tests }
-MCPRequestProcessorTest >> testUnknownMethodReturnsError32601 [
-	| response error |
-	response := processor processRawRequest:
-		(self request: 'nonexistent/method' id: 5 params: Dictionary new).
-	error := (self parse: response) at: 'error'.
-	self assert: (error at: 'code') equals: -32601
-]
-
-{ #category : #tests }
+{ #category : 'tests' }
 MCPRequestProcessorTest >> testParseErrorReturns32700 [
 	| response error |
 	response := processor processRawRequest: 'this is not json at all'.
@@ -160,19 +101,32 @@ MCPRequestProcessorTest >> testParseErrorReturns32700 [
 	self assert: (error at: 'code') equals: -32700
 ]
 
-{ #category : #tests }
-MCPRequestProcessorTest >> testUnknownToolReturnsError32602 [
-	| response error |
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testResponseIsValidJson [
+	| response |
 	response := processor processRawRequest:
-		(self request: 'tools/call' id: 6 params: (Dictionary new
-			at: 'name' put: 'no_such_tool';
-			at: 'arguments' put: Dictionary new;
-			yourself)).
-	error := (self parse: response) at: 'error'.
-	self assert: (error at: 'code') equals: -32602
+		(self request: 'tools/list' id: 1 params: Dictionary new).
+	self assert: response isString.
+	self shouldnt: [ NeoJSONReader fromString: response ] raise: Error
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testToolCanBeRegisteredAfterInit [
+	| newTool response tools toolNames |
+	newTool := MCPTool
+		name: 'late_tool'
+		description: 'Added after init'
+		schema: Dictionary new
+		handler: [ :args | 'ok' ].
+	processor registerTool: newTool.
+	response := processor processRawRequest:
+		(self request: 'tools/list' id: 1 params: Dictionary new).
+	tools := ((self parse: response) at: 'result') at: 'tools'.
+	toolNames := tools collect: [ :t | t at: 'name' ].
+	self assert: (toolNames includes: 'late_tool')
+]
+
+{ #category : 'tests' }
 MCPRequestProcessorTest >> testToolErrorSetsIsError [
 	| errorTool response result |
 	errorTool := MCPTool
@@ -188,42 +142,91 @@ MCPRequestProcessorTest >> testToolErrorSetsIsError [
 			yourself)).
 	result := (self parse: response) at: 'result'.
 	self assert: (result at: 'isError').
-	self assert: ((result at: 'content') first at: 'text') includesSubstring: 'boom'
+	self assert: (((result at: 'content') first at: 'text') includesSubstring: 'boom')
 ]
 
-{ #category : #tests }
-MCPRequestProcessorTest >> testNotificationReturnsNil [
-	| response |
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testToolsCallIsErrorFalseOnSuccess [
+	| response result |
 	response := processor processRawRequest:
-		(NeoJSONWriter toString: (Dictionary new
-			at: 'jsonrpc' put: '2.0';
-			at: 'method' put: 'notifications/initialized';
-			at: 'params' put: Dictionary new;
+		(self request: 'tools/call' id: 3 params: (Dictionary new
+			at: 'name' put: 'echo';
+			at: 'arguments' put: (Dictionary new at: 'text' put: 'hi'; yourself);
 			yourself)).
-	self assert: response isNil
+	result := (self parse: response) at: 'result'.
+	self deny: (result at: 'isError')
 ]
 
-{ #category : #tests }
-MCPRequestProcessorTest >> testResponseIsValidJson [
-	| response |
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testToolsCallReturnsTextContent [
+	| response result content |
 	response := processor processRawRequest:
-		(self request: 'tools/list' id: 1 params: Dictionary new).
-	self assert: response isString.
-	self shouldnt: [ NeoJSONReader fromString: response ] raise: Error
+		(self request: 'tools/call' id: 3 params: (Dictionary new
+			at: 'name' put: 'echo';
+			at: 'arguments' put: (Dictionary new at: 'text' put: 'hello world'; yourself);
+			yourself)).
+	result := (self parse: response) at: 'result'.
+	content := result at: 'content'.
+	self assert: content isArray.
+	self assert: content size equals: 1.
+	self assert: ((content first) at: 'type') equals: 'text'.
+	self assert: ((content first) at: 'text') equals: 'hello world'
 ]
 
-{ #category : #tests }
-MCPRequestProcessorTest >> testToolCanBeRegisteredAfterInit [
-	| newTool response tools toolNames |
-	newTool := MCPTool
-		name: 'late_tool'
-		description: 'Added after init'
-		schema: Dictionary new
-		handler: [ :args | 'ok' ].
-	processor registerTool: newTool.
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testToolsCallWithArithmeticTool [
+	| response result content |
 	response := processor processRawRequest:
-		(self request: 'tools/list' id: 1 params: Dictionary new).
+		(self request: 'tools/call' id: 4 params: (Dictionary new
+			at: 'name' put: 'add';
+			at: 'arguments' put: (Dictionary new
+				at: 'a' put: 10;
+				at: 'b' put: 32;
+				yourself);
+			yourself)).
+	result := (self parse: response) at: 'result'.
+	content := (result at: 'content') first.
+	self assert: (content at: 'text') equals: '42'
+]
+
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testToolsListReturnsAllRegisteredTools [
+	| response tools |
+	response := processor processRawRequest:
+		(self request: 'tools/list' id: 2 params: Dictionary new).
 	tools := ((self parse: response) at: 'result') at: 'tools'.
-	toolNames := tools collect: [ :t | t at: 'name' ].
-	self assert: (toolNames includes: 'late_tool')
+	self assert: tools size equals: 2
+]
+
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testToolsListToolHasRequiredFields [
+	| response tools firstTool |
+	response := processor processRawRequest:
+		(self request: 'tools/list' id: 2 params: Dictionary new).
+	tools := ((self parse: response) at: 'result') at: 'tools'.
+	firstTool := tools detect: [ :t | (t at: 'name') = 'echo' ].
+	self assert: (firstTool includesKey: 'name').
+	self assert: (firstTool includesKey: 'description').
+	self assert: (firstTool includesKey: 'inputSchema')
+]
+
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testUnknownMethodReturnsError32601 [
+	| response error |
+	response := processor processRawRequest:
+		(self request: 'nonexistent/method' id: 5 params: Dictionary new).
+	error := (self parse: response) at: 'error'.
+	self assert: (error at: 'code') equals: -32601
+]
+
+{ #category : 'tests' }
+MCPRequestProcessorTest >> testUnknownToolReturnsError32602 [
+	| response error |
+	response := processor processRawRequest:
+		(self request: 'tools/call' id: 6 params: (Dictionary new
+			at: 'name' put: 'no_such_tool';
+			at: 'arguments' put: Dictionary new;
+			yourself)).
+	error := (self parse: response) at: 'error'.
+	self assert: (error at: 'code') equals: -32602
 ]

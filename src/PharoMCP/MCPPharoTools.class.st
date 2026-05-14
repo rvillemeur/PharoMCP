@@ -32,11 +32,13 @@ MCPPharoTools class >> classDefinitionTool [
 			at: 'required' put: #('className');
 			yourself)
 		handler: [ :args |
-			| className class |
-			className := args at: 'className' ifAbsent: [ ^ 'Error: missing className' ].
-			class := Smalltalk globals at: className asSymbol ifAbsent: [
-				^ 'Error: class not found: ' , className ].
-			class definition ]
+			args at: 'className'
+				ifPresent: [ :className |
+					Smalltalk globals
+						at: className asSymbol
+						ifPresent: [ :class | class definition ]
+						ifAbsent: [ 'Error: class not found: ' , className ] ]
+				ifAbsent: [ 'Error: missing className' ] ]
 ]
 
 { #category : 'tools' }
@@ -55,12 +57,12 @@ MCPPharoTools class >> evaluateTool [
 			at: 'required' put: #('code');
 			yourself)
 		handler: [ :args |
-			| code result |
-			code := args at: 'code' ifAbsent: [ ^ 'Error: missing code argument' ].
-			result := [ Compiler evaluate: code ]
-				on: Error
-				do: [ :e | ^ 'Error: ' , e messageText ].
-			result printString ]
+			args at: 'code'
+				ifPresent: [ :code |
+					[ (OpalCompiler new evaluate: code) printString ]
+						on: Error
+						do: [ :e | 'Error: ' , e messageText ] ]
+				ifAbsent: [ 'Error: missing code argument' ] ]
 ]
 
 { #category : 'tools' }
@@ -79,24 +81,26 @@ MCPPharoTools class >> listClassesTool [
 			at: 'required' put: #('pattern');
 			yourself)
 		handler: [ :args |
-			| pattern classes |
+			| pattern |
 			pattern := args at: 'pattern' ifAbsent: [ '' ].
-			pattern isEmpty ifTrue: [ ^ 'Provide a non-empty pattern. The image contains thousands of classes.' ].
-			classes := Smalltalk globals allClasses
-				select: [ :c | c name asLowercase includesSubstring: pattern asLowercase ].
-			classes isEmpty
-				ifTrue: [ 'No classes found matching: ' , pattern ]
+			pattern isEmpty
+				ifTrue: [ 'Provide a non-empty pattern. The image contains thousands of classes.' ]
 				ifFalse: [
-					| sorted limited header |
-					sorted := classes asSortedCollection: [ :a :b | a name < b name ].
-					limited := sorted size > 50
-						ifTrue: [ sorted first: 50 ]
-						ifFalse: [ sorted ].
-					header := sorted size > 50
-						ifTrue: [ 'Found ' , sorted size printString , ' classes (showing first 50):' , String lf ]
-						ifFalse: [ '' ].
-					header , (String streamContents: [ :s |
-						limited do: [ :c | s nextPutAll: c name ] separatedBy: [ s nextPut: Character lf ] ]) ] ]
+					| classes sorted limited header |
+					classes := Smalltalk globals allClasses
+						select: [ :c | c name asLowercase includesSubstring: pattern asLowercase ].
+					classes isEmpty
+						ifTrue: [ 'No classes found matching: ' , pattern ]
+						ifFalse: [
+							sorted := classes asSortedCollection: [ :a :b | a name < b name ].
+							limited := sorted size > 50
+								ifTrue: [ sorted first: 50 ]
+								ifFalse: [ sorted ].
+							header := sorted size > 50
+								ifTrue: [ 'Found ' , sorted size printString , ' classes (showing first 50):' , String lf ]
+								ifFalse: [ '' ].
+							header , (String streamContents: [ :s |
+								limited do: [ :c | s nextPutAll: c name ] separatedBy: [ s nextPut: Character lf ] ]) ] ] ]
 ]
 
 { #category : 'tools' }
@@ -120,18 +124,23 @@ MCPPharoTools class >> listMethodsTool [
 			at: 'required' put: #('className');
 			yourself)
 		handler: [ :args |
-			| className class selectors |
-			className := args at: 'className' ifAbsent: [ ^ 'Error: missing className' ].
-			class := Smalltalk globals at: className asSymbol ifAbsent: [
-				^ 'Error: class not found: ' , className ].
-			(args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
-				ifTrue: [ class := class class ].
-			selectors := class methodDictionary keys asSortedCollection.
-			selectors isEmpty
-				ifTrue: [ 'No methods defined on ' , class name ]
-				ifFalse: [
-					String streamContents: [ :s |
-						selectors do: [ :sel | s nextPutAll: sel ] separatedBy: [ s nextPut: Character lf ] ] ] ]
+			args at: 'className'
+				ifPresent: [ :className |
+					| class side selectors |
+					class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+					class isNil
+						ifTrue: [ 'Error: class not found: ' , className ]
+						ifFalse: [
+							side := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
+								ifTrue: [ class class ]
+								ifFalse: [ class ].
+							selectors := side methodDictionary keys asSortedCollection.
+							selectors isEmpty
+								ifTrue: [ 'No methods defined on ' , class name ]
+								ifFalse: [
+									String streamContents: [ :s |
+										selectors do: [ :sel | s nextPutAll: sel ] separatedBy: [ s nextPut: Character lf ] ] ] ] ]
+				ifAbsent: [ 'Error: missing className' ] ]
 ]
 
 { #category : 'tools' }
@@ -159,17 +168,24 @@ MCPPharoTools class >> methodSourceTool [
 			at: 'required' put: #('className' 'methodName');
 			yourself)
 		handler: [ :args |
-			| className methodName class method |
-			className := args at: 'className' ifAbsent: [ ^ 'Error: missing className' ].
-			methodName := args at: 'methodName' ifAbsent: [ ^ 'Error: missing methodName' ].
-			class := Smalltalk globals at: className asSymbol ifAbsent: [
-				^ 'Error: class not found: ' , className ].
-			(args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
-				ifTrue: [ class := class class ].
-			method := class methodDictionary
-				at: methodName asSymbol
-				ifAbsent: [ ^ 'Error: method not found: ' , methodName , ' in ' , class name ].
-			method sourceCode ]
+			args at: 'className'
+				ifPresent: [ :className |
+					args at: 'methodName'
+						ifPresent: [ :methodName |
+							| class side |
+							class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+							class isNil
+								ifTrue: [ 'Error: class not found: ' , className ]
+								ifFalse: [
+									side := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
+										ifTrue: [ class class ]
+										ifFalse: [ class ].
+									side methodDictionary
+										at: methodName asSymbol
+										ifPresent: [ :method | method sourceCode ]
+										ifAbsent: [ 'Error: method not found: ' , methodName , ' in ' , class name ] ] ]
+						ifAbsent: [ 'Error: missing methodName' ] ]
+				ifAbsent: [ 'Error: missing className' ] ]
 ]
 
 { #category : 'registration' }

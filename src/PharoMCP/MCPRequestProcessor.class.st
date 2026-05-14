@@ -18,7 +18,7 @@ MCPRequestProcessor >> dispatchRequest: request [
 	params := request at: 'params' ifAbsent: [ Dictionary new ].
 
 	"Notifications have no id — no response per JSON-RPC 2.0"
-	(id isNil and: [ method startsWith: 'notifications/' ]) ifTrue: [ ^ nil ].
+	(id isNil and: [ method beginsWith: 'notifications/' ]) ifTrue: [ ^ nil ].
 
 	method = 'initialize' ifTrue: [ ^ self handleInitialize: params id: id ].
 	method = 'tools/list' ifTrue: [ ^ self handleToolsList: params id: id ].
