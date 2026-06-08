@@ -49,84 +49,12 @@ MCPLogEntryTest >> testExtractedResponseTextFromToolCallResponse [
 ]
 
 { #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForClassDefinition [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'class_definition' args: (Dictionary new at: 'className' put: 'OrderedCollection'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: 'OrderedCollection'
-]
-
-{ #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForEvalTool [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'evaluate_pharo' args: (Dictionary new at: 'code' put: '42 factorial'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: '42 factorial'
-]
-
-{ #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForListClasses [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'list_classes' args: (Dictionary new at: 'pattern' put: 'MCP'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: 'MCP'
-]
-
-{ #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForListMethods [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'list_methods' args: (Dictionary new at: 'className' put: 'String'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: 'String'
-]
-
-{ #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForMethodSource [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'method_source' args: (Dictionary new at: 'className' put: 'String'; at: 'methodName' put: 'size'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: 'String >> #size'
-]
-
-{ #category : 'tests - requestArgument' }
 MCPLogEntryTest >> testRequestArgumentForNonToolCall [
 	| entry |
 	entry := MCPLogEntry
 		request: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
 		response: ''.
 	self assert: entry requestArgument equals: '' 
-]
-
-{ #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForRunTestsClass [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'run_tests' args: (Dictionary new at: 'class_name' put: 'MCPToolTest'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: 'MCPToolTest'
-]
-
-{ #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForRunTestsPackage [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'run_tests' args: (Dictionary new at: 'package' put: 'PharoMCP'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: 'PharoMCP'
-]
-
-{ #category : 'tests - requestArgument' }
-MCPLogEntryTest >> testRequestArgumentForRunTestsWithSelector [
-	| entry |
-	entry := MCPLogEntry
-		request: (self toolCallRequest: 'run_tests' args: (Dictionary new at: 'class_name' put: 'MCPToolTest'; at: 'selector' put: 'testToolCreation'; yourself))
-		response: ''.
-	self assert: entry requestArgument equals: 'MCPToolTest >> #testToolCreation'
 ]
 
 { #category : 'tests - requestArgument' }

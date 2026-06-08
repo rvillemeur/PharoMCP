@@ -20,12 +20,12 @@ Class {
 
 { #category : 'tools' }
 MCPPharoTools class >> allTools [
-	^ Array
-		with: self evaluateTool
-		with: self listClassesTool
-		with: self classDefinitionTool
-		with: self methodSourceTool
-		with: self listMethodsTool
+	^ (OrderedCollection new
+		add: self evaluateTool; add: self listClassesTool; add: self classDefinitionTool;
+		add: self methodSourceTool; add: self listMethodsTool; add: self runTestsTool;
+		add: self runCriticsTool; add: self findSendersTool; add: self findImplementorsTool;
+		add: self listPackagesTool; add: self classHierarchyTool;
+		yourself) asArray
 ]
 
 { #category : 'tools' }
@@ -53,6 +53,55 @@ MCPPharoTools class >> classDefinitionTool [
 				ifAbsent: [ 'Error: missing className' ] ]
 ]
 
+{ #category : 'running' }
+MCPPharoTools class >> classHierarchyOf: className [
+	| class superchain subclasses |
+	class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+	class isNil ifTrue: [ ^ 'Error: class not found: ' , className ].
+	superchain := class allSuperclasses reversed.
+	subclasses := class subclasses asSortedCollection: [ :a :b | a name < b name ].
+	^ String streamContents: [ :s |
+		s nextPutAll: 'Superclass chain:'; nextPut: Character lf.
+		s nextPutAll: (((superchain collect: [ :c | c name ]) , (Array with: class name)) joinUsing: ' > ').
+		s nextPut: Character lf; nextPut: Character lf.
+		s nextPutAll: 'Direct subclasses (' , subclasses size printString , '):'; nextPut: Character lf.
+		subclasses isEmpty
+			ifTrue: [ s nextPutAll: '  (none)' ]
+			ifFalse: [ subclasses do: [ :c | s nextPutAll: '  ' , c name; nextPut: Character lf ] ] ]
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> classHierarchyTool [
+	^ MCPTool
+		name: 'class_hierarchy'
+		description: 'Show superclass chain and direct subclasses of a class.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'class_name' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Name of the class'; yourself);
+				yourself);
+			at: 'required' put: #('class_name');
+			yourself)
+		handler: [ :args |
+			| cls |
+			cls := args at: 'class_name' ifAbsent: [ nil ].
+			cls ifNil: [ 'Error: class_name is required' ]
+			ifNotNil: [ MCPPharoTools classHierarchyOf: cls ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> collectCritiquesForClass: aClass [
+	| critiques |
+	critiques := OrderedCollection new.
+	(ReCriticEngine critiquesOf: aClass) do: [:c | critiques add: c].
+	(ReCriticEngine critiquesOf: aClass class) do: [:c | critiques add: c].
+	aClass methodDictionary values do: [:m |
+		(ReCriticEngine critiquesOf: m) do: [:c | critiques add: c] ].
+	aClass class methodDictionary values do: [:m |
+		(ReCriticEngine critiquesOf: m) do: [:c | critiques add: c] ].
+	^ critiques
+]
+
 { #category : 'tools' }
 MCPPharoTools class >> evaluateTool [
 	^ MCPTool
@@ -75,6 +124,89 @@ MCPPharoTools class >> evaluateTool [
 						on: Error
 						do: [ :e | 'Error: ' , e messageText ] ]
 				ifAbsent: [ 'Error: missing code argument' ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> findImplementorsOf: selector [
+	| results names |
+	selector isEmpty ifTrue: [ ^ 'Error: selector is required' ].
+	results := SystemNavigation default allImplementorsOf: selector asSymbol.
+	results isEmpty ifTrue: [ ^ 'No implementors found for: #' , selector ].
+	names := (results collect: [ :m | m methodClass name ]) asSortedCollection.
+	^ String streamContents: [ :s |
+		s nextPutAll: results size printString , ' implementors of #' , selector; nextPut: Character lf.
+		names do: [ :n | s nextPutAll: n; nextPut: Character lf ] ]
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> findImplementorsTool [
+	^ MCPTool
+		name: 'find_implementors'
+		description: 'Find all classes that implement a given method selector.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'selector' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Method selector to search for (e.g. printOn:)'; yourself);
+				yourself);
+			at: 'required' put: #('selector');
+			yourself)
+		handler: [ :args |
+			| sel |
+			sel := args at: 'selector' ifAbsent: [ nil ].
+			sel ifNil: [ 'Error: selector is required' ]
+			ifNotNil: [ MCPPharoTools findImplementorsOf: sel ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> findSendersOf: selector [
+	| results sorted limited |
+	selector isEmpty ifTrue: [ ^ 'Error: selector is required' ].
+	results := SystemNavigation default allSendersOf: selector asSymbol.
+	results isEmpty ifTrue: [ ^ 'No senders found for: #' , selector ].
+	sorted := (results collect: [ :m | m methodClass name , ' >> #' , m selector]) asSortedCollection.
+	limited := sorted size > 100 ifTrue: [ sorted first: 100 ] ifFalse: [ sorted ].
+	^ String streamContents: [ :s |
+		sorted size > 100 ifTrue: [
+			s nextPutAll: 'Showing first 100 of ' , sorted size printString , ' senders';
+			nextPut: Character lf; nextPut: Character lf ].
+		limited do: [ :line | s nextPutAll: line; nextPut: Character lf ] ]
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> findSendersTool [
+	^ MCPTool
+		name: 'find_senders'
+		description: 'Find all methods that send a given message selector. Returns ClassName >> #selector per sender, capped at 100.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'selector' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Message selector to search for (e.g. printString)'; yourself);
+				yourself);
+			at: 'required' put: #('selector');
+			yourself)
+		handler: [ :args |
+			| sel |
+			sel := args at: 'selector' ifAbsent: [ nil ].
+			sel ifNil: [ 'Error: selector is required' ]
+			ifNotNil: [ MCPPharoTools findSendersOf: sel ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> formatCritiques: critiques forName: name [
+	| limited |
+	critiques isEmpty ifTrue: [ ^ 'No critiques found for: ' , name ].
+	limited := critiques size > 200
+		ifTrue: [ critiques first: 200 ]
+		ifFalse: [ critiques ].
+	^ String streamContents: [ :s |
+		critiques size > 200 ifTrue: [
+			s nextPutAll: 'Showing first 200 of ' , critiques size printString , ' critiques';
+			nextPut: Character lf; nextPut: Character lf ].
+		limited do: [ :c |
+			[ s nextPutAll: '[' , c rule class name , '] ' , c title.
+			c sourceAnchor ifNotNil: [ :a |
+				[s nextPutAll: ' (' , a entity printString , ')'] on: Error do: [ :e | ] ].
+			s nextPut: Character lf ] on: Error do: [ :e | ] ] ]
 ]
 
 { #category : 'running' }
@@ -174,6 +306,44 @@ MCPPharoTools class >> listMethodsTool [
 				ifAbsent: [ 'Error: missing className' ] ]
 ]
 
+{ #category : 'running' }
+MCPPharoTools class >> listPackagesMatching: pattern [
+	| allPkgs filtered sorted limited |
+	allPkgs := Smalltalk packageOrganizer packages.
+	filtered := (pattern isNil or: [ pattern isEmpty ])
+		ifTrue: [ allPkgs ]
+		ifFalse: [ allPkgs select: [ :p | p name asLowercase includesSubstring: pattern asLowercase ] ].
+	filtered isEmpty ifTrue: [ ^ 'No packages found matching: ' , pattern ].
+	sorted := filtered asSortedCollection: [ :a :b | a name < b name ].
+	limited := sorted size > 200 ifTrue: [ sorted first: 200 ] ifFalse: [ sorted ].
+	^ String streamContents: [ :s |
+		sorted size > 200 ifTrue: [
+			s nextPutAll: 'Showing first 200 of ' , sorted size printString , ' packages';
+			nextPut: Character lf; nextPut: Character lf ].
+		limited do: [ :p |
+			| tc |
+			tc := (p classes select: [ :c | c inheritsFrom: TestCase ]) size.
+			s nextPutAll: p name , ' (' , p classes size printString , ' classes'.
+			tc > 0 ifTrue: [ s nextPutAll: ', ' , tc printString , ' test classes' ].
+			s nextPutAll: ')'; nextPut: Character lf ] ]
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> listPackagesTool [
+	^ MCPTool
+		name: 'list_packages'
+		description: 'List packages in the image with class and test class counts. Optionally filter by name pattern.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'pattern' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Optional substring to filter package names (case-insensitive)'; yourself);
+				yourself);
+			at: 'required' put: #();
+			yourself)
+		handler: [ :args |
+			MCPPharoTools listPackagesMatching: (args at: 'pattern' ifAbsent: [ nil ]) ]
+]
+
 { #category : 'tools' }
 MCPPharoTools class >> methodSourceTool [
 	^ MCPTool
@@ -222,6 +392,48 @@ MCPPharoTools class >> methodSourceTool [
 { #category : 'registration' }
 MCPPharoTools class >> registerToolsWith: aProcessor [
 	self allTools do: [ :tool | aProcessor registerTool: tool ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> runCriticsOnClass: className [
+	| class critiques |
+	class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+	class isNil ifTrue: [ ^ 'Error: class not found: ' , className ].
+	critiques := self collectCritiquesForClass: class.
+	^ self formatCritiques: critiques forName: className
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> runCriticsOnPackage: packageName [
+	| pkg critiques |
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ nil ].
+	pkg isNil ifTrue: [ ^ 'Error: package not found: ' , packageName ].
+	critiques := OrderedCollection new.
+	pkg classes do: [ :cls |
+		(self collectCritiquesForClass: cls) do: [ :c | critiques add: c ] ].
+	^ self formatCritiques: critiques forName: packageName
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> runCriticsTool [
+	^ MCPTool
+		name: 'run_critics'
+		description: 'Run Renraku code critics on a class or all classes in a package. Returns rule violations with descriptions.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'class_name' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Class to critique. Required unless package given.'; yourself);
+				at: 'package' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Package name — critiques all classes. Overrides class_name.'; yourself);
+				yourself);
+			at: 'required' put: #();
+			yourself)
+		handler: [ :args |
+			| pkg cls |
+			pkg := args at: 'package' ifAbsent: [ nil ].
+			cls := args at: 'class_name' ifAbsent: [ nil ].
+			pkg ifNotNil: [ MCPPharoTools runCriticsOnPackage: pkg ]
+			ifNil: [ cls ifNil: [ 'Error: provide class_name or package' ]
+				ifNotNil: [ MCPPharoTools runCriticsOnClass: cls ] ] ]
 ]
 
 { #category : 'running' }

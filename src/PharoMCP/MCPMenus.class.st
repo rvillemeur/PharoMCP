@@ -1,8 +1,9 @@
 Class {
 	#name : 'MCPMenus',
 	#superclass : 'Object',
-	#category : 'PharoMCP',
-	#package : 'PharoMCP'
+	#category : 'PharoMCP-UI',
+	#package : 'PharoMCP',
+	#tag : 'UI'
 }
 
 { #category : 'menu' }

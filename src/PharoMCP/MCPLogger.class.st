@@ -23,6 +23,23 @@ MCPLogger >> entries [
 	^ entries
 ]
 
+{ #category : 'private' }
+MCPLogger >> entryClassForRequest: reqJson [
+	| parsed method toolName |
+	[ parsed := NeoJSONReader fromString: reqJson ]
+		on: Error do: [ :e | ^ MCPLogEntry ].
+	method := parsed at: 'method' ifAbsent: [ ^ MCPLogEntry ].
+	(method beginsWith: 'notifications/') ifTrue: [ ^ MCPNotificationLogEntry ].
+	method = 'tools/call' ifTrue: [
+		toolName := ((parsed at: 'params' ifAbsent: [ Dictionary new ]) at: 'name' ifAbsent: [ '' ]).
+		^ MCPLogEntry allSubclasses
+			detect: [ :c | (c class includesSelector: #toolName) and: [ c toolName = toolName ] ]
+			ifNone: [ MCPLogEntry ] ].
+	^ MCPLogEntry allSubclasses
+		detect: [ :c | (c class includesSelector: #toolName) and: [ c toolName = method ] ]
+		ifNone: [ MCPLogEntry ]
+]
+
 { #category : 'initialization' }
 MCPLogger >> initialize [
 	entries := OrderedCollection new
@@ -35,8 +52,9 @@ MCPLogger >> isActive [
 
 { #category : 'logging' }
 MCPLogger >> log: requestJson response: responseJson [
-	| entry |
-	entry := MCPLogEntry request: requestJson response: responseJson.
+	| entryClass entry |
+	entryClass := self entryClassForRequest: requestJson.
+	entry := entryClass request: requestJson response: responseJson.
 	entries add: entry.
 	^ entry
 ]

@@ -57,23 +57,6 @@ MCPLogEntry >> extractedResponseText [
 	^ content first at: 'text' ifAbsent: [ nil ]
 ]
 
-{ #category : 'private' }
-MCPLogEntry >> formatArguments: args forTool: aToolName [
-	aToolName = 'evaluate_pharo' ifTrue: [ ^ args at: 'code' ifAbsent: [ '' ] ].
-	aToolName = 'list_classes' ifTrue: [ ^ args at: 'pattern' ifAbsent: [ '' ] ].
-	aToolName = 'class_definition' ifTrue: [ ^ args at: 'className' ifAbsent: [ '' ] ].
-	aToolName = 'list_methods' ifTrue: [ ^ args at: 'className' ifAbsent: [ '' ] ].
-	aToolName = 'method_source' ifTrue: [
-		^ (args at: 'className' ifAbsent: [ '' ]) , ' >> #' , (args at: 'methodName' ifAbsent: [ '' ]) ].
-	aToolName = 'run_tests' ifTrue: [
-		| cls sel |
-		(args includesKey: 'package') ifTrue: [ ^ args at: 'package' ].
-		cls := args at: 'class_name' ifAbsent: [ '' ].
-		sel := args at: 'selector' ifAbsent: [ nil ].
-		^ sel ifNil: [ cls ] ifNotNil: [ cls , ' >> #' , sel ] ].
-	^ args isEmpty ifTrue: [ '' ] ifFalse: [ args values first printString ]
-]
-
 { #category : 'accessing' }
 MCPLogEntry >> formattedRequestJson [
 	^ [ NeoJSONWriter toStringPretty: (NeoJSONReader fromString: requestJson) ]
@@ -121,16 +104,23 @@ MCPLogEntry >> parseRequest: reqJson [
 		ifFalse: [ argStr ]
 ]
 
+{ #category : 'private' }
+MCPLogEntry >> parsedArguments [
+	"Returns arguments dict from a tools/call request, or empty dict on any error"
+	| parsed params |
+	method = 'tools/call' ifFalse: [ ^ Dictionary new ].
+	[ parsed := NeoJSONReader fromString: requestJson ]
+		on: Error do: [ :e | ^ Dictionary new ].
+	params := parsed at: 'params' ifAbsent: [ ^ Dictionary new ].
+	^ params at: 'arguments' ifAbsent: [ Dictionary new ]
+]
+
 { #category : 'accessing' }
 MCPLogEntry >> requestArgument [
-	| parsed params args |
-	method = 'tools/call' ifFalse: [ ^ '' ].
-	[ parsed := NeoJSONReader fromString: requestJson ]
-		on: Error do: [ :e | ^ '' ].
-	params := parsed at: 'params' ifAbsent: [ ^ '' ].
-	args := params at: 'arguments' ifAbsent: [ ^ '' ].
-	(args isKindOf: Dictionary) ifFalse: [ ^ '' ].
-	^ self formatArguments: args forTool: toolName
+	| args |
+	args := self parsedArguments.
+	args isEmpty ifTrue: [ ^ '' ].
+	^ args values first printString
 ]
 
 { #category : 'accessing' }
