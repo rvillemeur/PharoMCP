@@ -29,6 +29,24 @@ MCPLogEntry class >> request: reqJson response: respJson [
 ]
 
 { #category : 'accessing' }
+MCPLogEntry >> asDictionary [
+	| dict |
+	dict := Dictionary new.
+	dict at: 'timestamp' put: timestamp printString.
+	dict at: 'method' put: (method ifNil: [ '?' ]).
+	dict at: 'toolName' put: (toolName ifNil: [ '' ]).
+	dict at: 'requestArgument' put: self requestArgument.
+	dict at: 'request' put: ([ NeoJSONReader fromString: requestJson ]
+		on: Error do: [ :e | requestJson ]).
+	dict at: 'response' put: (responseJson isEmpty
+		ifTrue: [ nil ]
+		ifFalse: [ [ NeoJSONReader fromString: responseJson ]
+			on: Error do: [ :e | responseJson ] ]).
+	self extractedResponseText ifNotNil: [ :txt | dict at: 'result' put: txt ].
+	^ dict
+]
+
+{ #category : 'accessing' }
 MCPLogEntry >> displayArgs [
 	toolArgs isNil ifTrue: [ ^ '' ].
 	^ toolArgs size > 80

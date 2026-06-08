@@ -13,6 +13,7 @@ Class {
 		'serverButton',
 		'loggingButton',
 		'clearButton',
+		'exportButton',
 		'logList',
 		'detailPresenter',
 		'server'
@@ -61,6 +62,7 @@ MCPServerPresenter >> defaultLayout [
 			add: serverButton expand: false;
 			add: loggingButton expand: false;
 			add: clearButton expand: false;
+			add: exportButton expand: false;
 			yourself) expand: false;
 		add: (SpPanedLayout newLeftToRight
 			positionOfSlider: 50;
@@ -70,29 +72,34 @@ MCPServerPresenter >> defaultLayout [
 		yourself
 ]
 
+{ #category : 'private' }
+MCPServerPresenter >> exportLog [
+	| dialog |
+	server logger entries isEmpty ifTrue: [
+		self inform: 'No log entries to export.'.
+		^ self ].
+	dialog := StSaveFilePresenter new.
+	dialog extensions: #('json') named: 'JSON files'.
+	dialog nameText: 'mcp-log.json'.
+	dialog okAction: [ :ref |
+		ref ifNotNil: [
+			ref writeStreamDo: [ :s | s nextPutAll: server logger exportAsJson ] ] ].
+	dialog openModal
+]
+
 { #category : 'initialization' }
 MCPServerPresenter >> initializePresenters [
-	serverButton := self newButton
-		label: 'Start Server';
-		yourself.
-	loggingButton := self newButton
-		label: 'Start Logging';
-		yourself.
-	clearButton := self newButton
-		label: 'Clear Log';
-		action: [ self clearLog ];
-		yourself.
+	serverButton := self newButton label: 'Start Server'; yourself.
+	loggingButton := self newButton label: 'Start Logging'; yourself.
+	clearButton := self newButton label: 'Clear Log'; action: [ self clearLog ]; yourself.
+	exportButton := self newButton label: 'Export Log'; action: [ self exportLog ]; yourself.
 	logList := self newTable.
 	logList
-		addColumn: (SpStringTableColumn
-			title: 'Method'
-			evaluated: [ :e | e displayMethod ]);
-		addColumn: (SpStringTableColumn
-			title: 'Args'
-			evaluated: [ :e | e displayArgs ]);
+		addColumn: (SpStringTableColumn title: 'Method' evaluated: [ :e | e displayMethod ]);
+		addColumn: (SpStringTableColumn title: 'Args' evaluated: [ :e | e displayArgs ]);
 		whenSelectedItemChangedDo: [ :item |
 			item ifNotNil: [ detailPresenter showEntry: item ] ].
-	detailPresenter := self instantiate: MCPLogEntryPresenter.
+	detailPresenter := self instantiate: MCPLogEntryPresenter
 ]
 
 { #category : 'initialization' }

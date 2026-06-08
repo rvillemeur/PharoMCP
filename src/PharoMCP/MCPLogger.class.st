@@ -40,6 +40,11 @@ MCPLogger >> entryClassForRequest: reqJson [
 		ifNone: [ MCPLogEntry ]
 ]
 
+{ #category : 'accessing' }
+MCPLogger >> exportAsJson [
+	^ NeoJSONWriter toStringPretty: (entries collect: [ :e | e asDictionary ]) asArray
+]
+
 { #category : 'initialization' }
 MCPLogger >> initialize [
 	entries := OrderedCollection new

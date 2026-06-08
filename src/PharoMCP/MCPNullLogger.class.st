@@ -19,6 +19,11 @@ MCPNullLogger >> entries [
 	^ #()
 ]
 
+{ #category : 'accessing' }
+MCPNullLogger >> exportAsJson [
+	^ '[]'
+]
+
 { #category : 'testing' }
 MCPNullLogger >> isActive [
 	^ false
