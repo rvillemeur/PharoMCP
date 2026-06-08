@@ -23,12 +23,19 @@ Class {
 	#instVars : [
 		'httpServer',
 		'port',
-		'processor'
+		'processor',
+		'announcer',
+		'logger'
 	],
 	#category : 'PharoMCP-Core',
 	#package : 'PharoMCP',
 	#tag : 'Core'
 }
+
+{ #category : 'instance creation' }
+MCPServer class >> current [
+	^ Smalltalk at: #PharoMCPServer ifAbsentPut: [ self default ]
+]
 
 { #category : 'instance creation' }
 MCPServer class >> default [
@@ -51,26 +58,27 @@ MCPServer >> addCorsHeadersTo: aResponse [
 	^ aResponse
 ]
 
+{ #category : 'accessing' }
+MCPServer >> announcer [
+	^ announcer
+]
+
 { #category : 'private' }
 MCPServer >> handleRequest: request [
 	"Functional delegate protocol — ZnServer uses the returned ZnResponse"
 	| body result |
-
 	request method = 'OPTIONS' ifTrue: [
 		^ self addCorsHeadersTo: (ZnResponse new
 			statusLine: ZnStatusLine ok;
 			yourself) ].
-
 	request method ~= 'POST' ifTrue: [
 		^ self addCorsHeadersTo: (ZnResponse new
 			statusLine: (ZnStatusLine code: 405 text: 'Method Not Allowed');
 			entity: (ZnEntity text: 'Method Not Allowed');
 			yourself) ].
-
 	body := (request hasEntity and: [ request entity notNil ])
 		ifTrue: [ request entity string ]
 		ifFalse: [ '{}' ].
-
 	result := [ processor processRawRequest: body ]
 		on: Error
 		do: [ :e |
@@ -82,7 +90,11 @@ MCPServer >> handleRequest: request [
 					at: 'message' put: 'Internal error: ' , e messageText;
 					yourself);
 				yourself) ].
-
+	[ | entry |
+	  entry := logger log: body response: result.
+	  entry ifNotNil: [
+		announcer announce: (MCPRequestLogged new entry: entry; yourself) ] ]
+		on: Error do: [ :e | "absorb logging errors" ].
 	^ self addCorsHeadersTo: (result
 		ifNil: [
 			ZnResponse new
@@ -111,12 +123,24 @@ MCPServer >> handleRequest: request into: response [
 MCPServer >> initialize [
 	port := 7777.
 	processor := MCPRequestProcessor new.
-	MCPPharoTools registerToolsWith: processor
+	MCPPharoTools registerToolsWith: processor.
+	announcer := Announcer new.
+	logger := MCPNullLogger new
+]
+
+{ #category : 'testing' }
+MCPServer >> isLogging [
+	^ logger isActive
 ]
 
 { #category : 'testing' }
 MCPServer >> isRunning [
 	^ httpServer notNil and: [ httpServer isRunning ]
+]
+
+{ #category : 'accessing' }
+MCPServer >> logger [
+	^ logger
 ]
 
 { #category : 'accessing' }
@@ -144,7 +168,15 @@ MCPServer >> start [
 	httpServer := ZnServer on: port.
 	httpServer delegate: self.
 	httpServer start.
-	Transcript show: 'PharoMCP running on http://localhost:' , port printString; cr
+	Transcript show: 'PharoMCP running on http://localhost:' , port printString; cr.
+	announcer announce: MCPServerStarted new
+]
+
+{ #category : 'logging' }
+MCPServer >> startLogging [
+	logger isActive ifTrue: [ ^ self ].
+	logger := MCPLogger new.
+	announcer announce: MCPLoggingStarted new
 ]
 
 { #category : 'control' }
@@ -153,5 +185,13 @@ MCPServer >> stop [
 	s := httpServer.
 	httpServer := nil.
 	s ifNotNil: [ s stop ].
-	Transcript show: 'PharoMCP stopped'; cr
+	Transcript show: 'PharoMCP stopped'; cr.
+	announcer announce: MCPServerStopped new
+]
+
+{ #category : 'logging' }
+MCPServer >> stopLogging [
+	logger isActive ifFalse: [ ^ self ].
+	logger := MCPNullLogger new.
+	announcer announce: MCPLoggingStopped new
 ]
