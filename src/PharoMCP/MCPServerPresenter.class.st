@@ -63,7 +63,7 @@ MCPServerPresenter >> defaultLayout [
 			add: clearButton expand: false;
 			yourself) expand: false;
 		add: (SpPanedLayout newLeftToRight
-			positionOfSlider: 40;
+			positionOfSlider: 50;
 			add: logList;
 			add: detailPresenter;
 			yourself);

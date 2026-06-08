@@ -16,9 +16,3 @@ MCPMenus class >> buildWorldMenu: aBuilder [
 		order: 40;
 		yourself
 ]
-
-{ #category : 'test' }
-MCPMenus class >> testPragma [
-	<worldMenu>
-	^ nil
-]

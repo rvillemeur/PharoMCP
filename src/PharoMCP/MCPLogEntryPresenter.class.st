@@ -8,8 +8,12 @@ Class {
 	#name : 'MCPLogEntryPresenter',
 	#superclass : 'SpPresenter',
 	#instVars : [
-		'requestText',
-		'responseText'
+		'requestArgumentText',
+		'requestRawText',
+		'responseText',
+		'responseRawText',
+		'requestNotebook',
+		'responseNotebook'
 	],
 	#category : 'PharoMCP-UI',
 	#package : 'PharoMCP',
@@ -22,31 +26,43 @@ MCPLogEntryPresenter >> defaultLayout [
 		positionOfSlider: 50;
 		add: (SpBoxLayout newTopToBottom
 			add: (self newLabel label: 'Request:') expand: false;
-			add: requestText;
+			add: requestNotebook;
 			yourself);
 		add: (SpBoxLayout newTopToBottom
 			add: (self newLabel label: 'Response:') expand: false;
-			add: responseText;
+			add: responseNotebook;
 			yourself);
 		yourself
 ]
 
 { #category : 'initialization' }
 MCPLogEntryPresenter >> initializePresenters [
-	requestText := self newText
-		beNotEditable;
-		yourself.
-	responseText := self newText
-		beNotEditable;
-		yourself.
+	requestArgumentText := self newText beNotEditable; yourself.
+	requestRawText := self newText beNotEditable; yourself.
+	responseText := self newText beNotEditable; yourself.
+	responseRawText := self newText beNotEditable; yourself.
+	requestNotebook := self newNotebook.
+	requestNotebook
+		addPage: (SpNotebookPage title: 'Argument' provider: [ requestArgumentText ]);
+		addPage: (SpNotebookPage title: 'Raw' provider: [ requestRawText ]).
+	responseNotebook := self newNotebook.
+	responseNotebook
+		addPage: (SpNotebookPage title: 'Text' provider: [ responseText ]);
+		addPage: (SpNotebookPage title: 'Raw' provider: [ responseRawText ])
 ]
 
 { #category : 'api' }
 MCPLogEntryPresenter >> showEntry: anEntry [
+	| extracted |
 	anEntry isNil ifTrue: [
-		requestText text: ''.
+		requestArgumentText text: ''.
+		requestRawText text: ''.
 		responseText text: ''.
+		responseRawText text: ''.
 		^ self ].
-	requestText text: anEntry formattedRequestJson.
-	responseText text: anEntry formattedResponseJson
+	requestArgumentText text: anEntry requestArgument.
+	requestRawText text: anEntry formattedRequestJson.
+	extracted := anEntry extractedResponseText.
+	responseText text: (extracted ifNil: [ '(no text content)' ]).
+	responseRawText text: anEntry formattedResponseJson
 ]

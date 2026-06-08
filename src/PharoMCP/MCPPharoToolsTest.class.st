@@ -70,6 +70,15 @@ MCPPharoToolsTest >> testRunTestsPackageNotFound [
 ]
 
 { #category : 'tests - run_tests' }
+MCPPharoToolsTest >> testRunTestsPackageSuccess [
+	"Uses a small non-PharoMCP package to avoid recursive suite building"
+	| result |
+	result := tool call: (Dictionary new at: 'package' put: 'Transcript-NonInteractive-Tests'; yourself).
+	self assert: (result includesSubstring: 'Transcript-NonInteractive-Tests').
+	self assert: (result includesSubstring: 'passed')
+]
+
+{ #category : 'tests - run_tests' }
 MCPPharoToolsTest >> testRunTestsSingleSelector [
 	| result |
 	result := tool call: (Dictionary new at: 'class_name' put: 'MCPToolTest'; at: 'selector' put: 'testToolCreation'; yourself).
