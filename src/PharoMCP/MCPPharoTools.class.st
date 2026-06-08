@@ -77,6 +77,25 @@ MCPPharoTools class >> evaluateTool [
 				ifAbsent: [ 'Error: missing code argument' ] ]
 ]
 
+{ #category : 'running' }
+MCPPharoTools class >> formatResult: result forName: name selector: selector [
+	^ String streamContents: [ :s |
+		selector
+			ifNil: [ s nextPutAll: 'Ran ' , result runCount printString , ' tests in ' , name; nextPut: Character lf ]
+			ifNotNil: [ :sel | s nextPutAll: 'Ran ' , name , ' >> ' , sel; nextPut: Character lf ].
+		s nextPutAll: result passedCount printString , ' passed'; nextPut: Character lf.
+		s nextPutAll: result unexpectedFailureCount printString , ' failed'; nextPut: Character lf.
+		s nextPutAll: result unexpectedErrorCount printString , ' errored'; nextPut: Character lf.
+		result failureMessages ifNotEmpty: [
+			s nextPut: Character lf; nextPutAll: '--- Failures ---'; nextPut: Character lf.
+			result failureMessages keysAndValuesDo: [ :sel :msg |
+				s nextPutAll: sel; nextPut: Character lf; nextPutAll: msg; nextPut: Character lf; nextPut: Character lf ] ].
+		result errorMessages ifNotEmpty: [
+			s nextPut: Character lf; nextPutAll: '--- Errors ---'; nextPut: Character lf.
+			result errorMessages keysAndValuesDo: [ :sel :msg |
+				s nextPutAll: sel; nextPut: Character lf; nextPutAll: msg; nextPut: Character lf; nextPut: Character lf ] ] ]
+]
+
 { #category : 'tools' }
 MCPPharoTools class >> listClassesTool [
 	^ MCPTool
@@ -203,4 +222,63 @@ MCPPharoTools class >> methodSourceTool [
 { #category : 'registration' }
 MCPPharoTools class >> registerToolsWith: aProcessor [
 	self allTools do: [ :tool | aProcessor registerTool: tool ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> runTestsForClass: className selector: selector [
+	| class suite result |
+	class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+	class isNil ifTrue: [ ^ 'Error: class not found: ' , className ].
+	(class inheritsFrom: TestCase) ifFalse: [
+		^ 'Error: ' , className , ' is not a TestCase subclass' ].
+	suite := selector
+		ifNil: [ class suite ]
+		ifNotNil: [ :sel |
+			TestSuite new
+				addTest: (class selector: sel asSymbol);
+				yourself ].
+	result := MCPTestResult new.
+	suite run: result.
+	^ self formatResult: result forName: className selector: selector
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> runTestsInPackage: packageName [
+	| pkg classes suite result |
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ nil ].
+	pkg isNil ifTrue: [ ^ 'Error: package not found: ' , packageName ].
+	classes := pkg classes select: [ :c | c inheritsFrom: TestCase ].
+	classes isEmpty ifTrue: [ ^ 'Error: no TestCase subclasses in package: ' , packageName ].
+	suite := TestSuite new.
+	classes do: [ :c | c suite tests do: [ :t | suite addTest: t ] ].
+	result := MCPTestResult new.
+	suite run: result.
+	^ self formatResult: result forName: packageName selector: nil
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> runTestsTool [
+	^ MCPTool
+		name: 'run_tests'
+		description: 'Run a TestCase subclass, a single test method, or all TestCase subclasses in a package. Returns pass/fail/error counts and failure messages.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'class_name' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'TestCase subclass name. Required unless package is given.'; yourself);
+				at: 'selector' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Single test method selector. Omit to run all tests.'; yourself);
+				at: 'package' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Package name — runs all TestCase subclasses. Overrides class_name.'; yourself);
+				yourself);
+			at: 'required' put: #();
+			yourself)
+		handler: [ :args |
+			| className selector package |
+			className := args at: 'class_name' ifAbsent: [ nil ].
+			selector := args at: 'selector' ifAbsent: [ nil ].
+			package := args at: 'package' ifAbsent: [ nil ].
+			package
+				ifNotNil: [ MCPPharoTools runTestsInPackage: package ]
+				ifNil: [
+					className
+						ifNil: [ 'Error: provide class_name or package' ]
+						ifNotNil: [ MCPPharoTools runTestsForClass: className selector: selector ] ] ]
 ]
