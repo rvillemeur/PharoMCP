@@ -165,6 +165,7 @@ MCPServer >> registerTool: aTool [
 
 { #category : 'control' }
 MCPServer >> start [
+	self isRunning ifTrue: [ ^ self ].
 	httpServer := ZnServer on: port.
 	httpServer delegate: self.
 	httpServer start.
