@@ -6,6 +6,64 @@ Class {
 	#tag : 'Tests'
 }
 
+{ #category : 'tests' }
+MCPLogEntryTest >> testAsDictionaryHasRequiredKeys [
+	| entry dict |
+	entry := MCPLogEntry
+		request: (self toolCallRequest: 'evaluate_pharo' args: (Dictionary new at: 'code' put: '42'; yourself))
+		response: (self toolCallResponse: '42').
+	dict := entry asDictionary.
+	#('timestamp' 'method' 'toolName' 'requestArgument' 'request' 'response') do: [ :k |
+		self assert: (dict includesKey: k) ]
+]
+
+{ #category : 'tests' }
+MCPLogEntryTest >> testAsDictionaryRequestIsParsed [
+	| entry dict |
+	entry := MCPLogEntry
+		request: (self toolCallRequest: 'evaluate_pharo' args: (Dictionary new at: 'code' put: '42'; yourself))
+		response: (self toolCallResponse: '42').
+	dict := entry asDictionary.
+	self assert: (dict at: 'request') isDictionary
+]
+
+{ #category : 'tests' }
+MCPLogEntryTest >> testDisplayArgsLongStringTruncated [
+	| entry longCode |
+	longCode := String new: 100 withAll: $x.
+	entry := MCPLogEntry
+		request: (self toolCallRequest: 'evaluate_pharo' args: (Dictionary new at: 'code' put: longCode; yourself))
+		response: '{}'.
+	self assert: entry displayArgs size <= 83.
+	self assert: (entry displayArgs endsWith: '...')
+]
+
+{ #category : 'tests' }
+MCPLogEntryTest >> testDisplayArgsShortString [
+	| entry |
+	entry := MCPLogEntry
+		request: (self toolCallRequest: 'evaluate_pharo' args: (Dictionary new at: 'code' put: '42 factorial'; yourself))
+		response: '{}'.
+	self assert: (entry displayArgs includesSubstring: '42 factorial')
+]
+
+{ #category : 'tests' }
+MCPLogEntryTest >> testDisplayMethodFallsBackToMethod [
+	| entry req |
+	req := NeoJSONWriter toString: (Dictionary new at: 'jsonrpc' put: '2.0'; at: 'method' put: 'initialize'; yourself).
+	entry := MCPLogEntry request: req response: '{}'.
+	self assert: entry displayMethod equals: 'initialize'
+]
+
+{ #category : 'tests' }
+MCPLogEntryTest >> testDisplayMethodForToolCall [
+	| entry |
+	entry := MCPLogEntry
+		request: (self toolCallRequest: 'evaluate_pharo' args: Dictionary new)
+		response: '{}'.
+	self assert: entry displayMethod equals: 'tools/call: evaluate_pharo'
+]
+
 { #category : 'tests - extractedResponseText' }
 MCPLogEntryTest >> testExtractedResponseTextFromEmptyResponse [
 	| entry |
