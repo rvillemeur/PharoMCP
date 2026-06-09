@@ -1,3 +1,6 @@
+"
+Log entry for find_senders tool calls. requestArgument shows the selector being searched.
+"
 Class {
 	#name : 'MCPFindSendersLogEntry',
 	#superclass : 'MCPLogEntry',

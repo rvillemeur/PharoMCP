@@ -1,3 +1,6 @@
+"
+Log entry for tools/list requests that enumerate available MCP tools.
+"
 Class {
 	#name : 'MCPToolsListLogEntry',
 	#superclass : 'MCPLogEntry',

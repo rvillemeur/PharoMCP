@@ -1,3 +1,6 @@
+"
+Log entry for find_implementors tool calls. requestArgument shows the selector being searched.
+"
 Class {
 	#name : 'MCPFindImplementorsLogEntry',
 	#superclass : 'MCPLogEntry',

@@ -1,3 +1,6 @@
+"
+Log entry for evaluate_pharo tool calls. requestArgument shows the code snippet.
+"
 Class {
 	#name : 'MCPEvalLogEntry',
 	#superclass : 'MCPLogEntry',

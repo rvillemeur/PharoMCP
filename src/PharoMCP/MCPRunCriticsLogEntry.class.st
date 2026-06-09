@@ -1,3 +1,6 @@
+"
+Log entry for run_critics tool calls. requestArgument shows the class or package name being critiqued.
+"
 Class {
 	#name : 'MCPRunCriticsLogEntry',
 	#superclass : 'MCPLogEntry',

@@ -1,3 +1,6 @@
+"
+Log entry for class_definition tool calls. requestArgument shows the class name.
+"
 Class {
 	#name : 'MCPClassDefinitionLogEntry',
 	#superclass : 'MCPLogEntry',

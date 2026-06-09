@@ -1,3 +1,6 @@
+"
+Base class for all PharoMCP server announcements.
+"
 Class {
 	#name : 'MCPAnnouncement',
 	#superclass : 'Announcement',

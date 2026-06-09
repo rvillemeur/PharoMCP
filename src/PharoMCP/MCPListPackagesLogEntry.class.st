@@ -1,3 +1,6 @@
+"
+Log entry for list_packages tool calls. requestArgument shows the optional filter pattern.
+"
 Class {
 	#name : 'MCPListPackagesLogEntry',
 	#superclass : 'MCPLogEntry',

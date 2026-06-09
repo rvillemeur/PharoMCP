@@ -1,3 +1,6 @@
+"
+Log entry for method_source tool calls. requestArgument shows className>>methodName.
+"
 Class {
 	#name : 'MCPMethodSourceLogEntry',
 	#superclass : 'MCPLogEntry',

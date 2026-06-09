@@ -1,3 +1,6 @@
+"
+Announced when a new MCP request/response pair is captured by the logger. Carries the MCPLogEntry via #entry.
+"
 Class {
 	#name : 'MCPRequestLogged',
 	#superclass : 'MCPAnnouncement',

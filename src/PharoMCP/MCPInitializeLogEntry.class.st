@@ -1,3 +1,6 @@
+"
+Log entry for MCP protocol initialize handshake requests.
+"
 Class {
 	#name : 'MCPInitializeLogEntry',
 	#superclass : 'MCPLogEntry',

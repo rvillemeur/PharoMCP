@@ -1,3 +1,6 @@
+"
+Log entry for run_tests tool calls. requestArgument shows the package, class, or selector under test.
+"
 Class {
 	#name : 'MCPRunTestsLogEntry',
 	#superclass : 'MCPLogEntry',

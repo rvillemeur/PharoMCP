@@ -1,3 +1,6 @@
+"
+Announced when request/response logging is deactivated.
+"
 Class {
 	#name : 'MCPLoggingStopped',
 	#superclass : 'MCPAnnouncement',

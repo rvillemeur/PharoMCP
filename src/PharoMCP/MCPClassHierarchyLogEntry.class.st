@@ -1,3 +1,6 @@
+"
+Log entry for class_hierarchy tool calls. requestArgument shows the class name.
+"
 Class {
 	#name : 'MCPClassHierarchyLogEntry',
 	#superclass : 'MCPLogEntry',

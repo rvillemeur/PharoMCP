@@ -73,7 +73,7 @@ MCPServer >> handleRequest: request [
 			yourself) ].
 	request method ~= 'POST' ifTrue: [
 		^ self addCorsHeadersTo: (ZnResponse new
-			statusLine: (ZnStatusLine code: 405 text: 'Method Not Allowed');
+			statusLine: ZnStatusLine methodNotAllowed;
 			entity: (ZnEntity text: 'Method Not Allowed');
 			yourself) ].
 	body := (request hasEntity and: [ request entity notNil ])

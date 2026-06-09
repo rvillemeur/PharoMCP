@@ -1,3 +1,6 @@
+"
+Provides Pharo world-menu entries for opening the PharoMCP server presenter.
+"
 Class {
 	#name : 'MCPMenus',
 	#superclass : 'Object',

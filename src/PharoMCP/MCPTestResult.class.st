@@ -1,3 +1,6 @@
+"
+Wraps a Pharo SUnit test result for JSON serialization by the run_tests tool. Holds status, class name, selector, and failure message.
+"
 Class {
 	#name : 'MCPTestResult',
 	#superclass : 'TestResult',

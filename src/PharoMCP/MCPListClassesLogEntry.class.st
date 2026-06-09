@@ -1,3 +1,6 @@
+"
+Log entry for list_classes tool calls. requestArgument shows the search pattern.
+"
 Class {
 	#name : 'MCPListClassesLogEntry',
 	#superclass : 'MCPLogEntry',
