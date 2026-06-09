@@ -13,6 +13,8 @@ BaselineOfPharoMCP >> baseline: spec [
 			with: [ spec repository: 'github://svenvc/NeoJSON/repository' ].
 		spec
 			package: 'PharoMCP'
-				with: [ spec requires: #('NeoJSON') ]
+				with: [ spec requires: #('NeoJSON') ];
+			package: 'PharoMCP-Tests'
+				with: [ spec requires: #('PharoMCP') ]
 	]
 ]
