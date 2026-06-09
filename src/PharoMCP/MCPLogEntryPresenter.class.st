@@ -23,7 +23,7 @@ Class {
 { #category : 'layout' }
 MCPLogEntryPresenter >> defaultLayout [
 	^ SpPanedLayout newTopToBottom
-		positionOfSlider: 50;
+		positionOfSlider: 250;
 		add: (SpBoxLayout newTopToBottom
 			add: (self newLabel label: 'Request:') expand: false;
 			add: requestNotebook;
@@ -53,13 +53,14 @@ MCPLogEntryPresenter >> initializePresenters [
 
 { #category : 'api' }
 MCPLogEntryPresenter >> showEntry: anEntry [
+
 	| extracted |
-	anEntry isNil ifTrue: [
-		requestArgumentText text: ''.
-		requestRawText text: ''.
-		responseText text: ''.
-		responseRawText text: ''.
-		^ self ].
+	anEntry ifNil: [
+			requestArgumentText text: ''.
+			requestRawText text: ''.
+			responseText text: ''.
+			responseRawText text: ''.
+			^ self ].
 	requestArgumentText text: anEntry requestArgument.
 	requestRawText text: anEntry formattedRequestJson.
 	extracted := anEntry extractedResponseText.

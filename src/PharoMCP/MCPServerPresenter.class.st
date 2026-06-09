@@ -65,7 +65,7 @@ MCPServerPresenter >> defaultLayout [
 			add: exportButton expand: false;
 			yourself) expand: false;
 		add: (SpPanedLayout newLeftToRight
-			positionOfSlider: 50;
+			positionOfSlider: 250;
 			add: logList;
 			add: detailPresenter;
 			yourself);
@@ -104,14 +104,16 @@ MCPServerPresenter >> initializePresenters [
 
 { #category : 'initialization' }
 MCPServerPresenter >> initializeWindow: aWindow [
+
+	super initializeWindow: aWindow.
 	aWindow
 		title: self windowTitle;
 		initialExtent: 960 @ 580;
 		whenOpenedDo: [
-			self updateServerButton.
-			self updateLoggingButton.
-			self refreshLog.
-			self subscribeToAnnouncements ];
+				self updateServerButton.
+				self updateLoggingButton.
+				self refreshLog.
+				self subscribeToAnnouncements ];
 		whenClosedDo: [ self unsubscribeFromAnnouncements ]
 ]
 
