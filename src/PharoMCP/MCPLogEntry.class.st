@@ -105,13 +105,19 @@ MCPLogEntry >> method [
 
 { #category : 'private' }
 MCPLogEntry >> parseRequest: reqJson [
-	| parsed params args argStr |
+	| parsed params |
 	[ parsed := NeoJSONReader fromString: reqJson ]
 		on: Error
 		do: [ :e | method := '(parse error)'. ^ self ].
 	method := parsed at: 'method' ifAbsent: [ '?' ].
 	params := parsed at: 'params' ifAbsent: [ Dictionary new ].
 	method = 'tools/call' ifFalse: [ ^ self ].
+	self parseToolCallParams: params
+]
+
+{ #category : 'private' }
+MCPLogEntry >> parseToolCallParams: params [
+	| args argStr |
 	toolName := params at: 'name' ifAbsent: [ '' ].
 	args := params at: 'arguments' ifAbsent: [ Dictionary new ].
 	argStr := args isEmpty

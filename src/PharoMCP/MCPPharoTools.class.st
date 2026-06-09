@@ -209,6 +209,16 @@ MCPPharoTools class >> formatCritiques: critiques forName: name [
 			s nextPut: Character lf ] on: Error do: [ :e | ] ] ]
 ]
 
+{ #category : 'private' }
+MCPPharoTools class >> formatPackageSummary: aPackage [
+	| tc |
+	tc := (aPackage classes select: [ :c | c inheritsFrom: TestCase ]) size.
+	^ String streamContents: [ :s |
+		s nextPutAll: aPackage name , ' (' , aPackage classes size printString , ' classes'.
+		tc > 0 ifTrue: [ s nextPutAll: ', ' , tc printString , ' test classes' ].
+		s nextPutAll: ')' ]
+]
+
 { #category : 'running' }
 MCPPharoTools class >> formatResult: result forName: name selector: selector [
 	^ String streamContents: [ :s |
@@ -226,6 +236,21 @@ MCPPharoTools class >> formatResult: result forName: name selector: selector [
 			s nextPut: Character lf; nextPutAll: '--- Errors ---'; nextPut: Character lf.
 			result errorMessages keysAndValuesDo: [ :sel :msg |
 				s nextPutAll: sel; nextPut: Character lf; nextPutAll: msg; nextPut: Character lf; nextPut: Character lf ] ] ]
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> listClassesMatching: pattern [
+	| classes sorted limited header |
+	classes := Smalltalk globals allClasses
+		select: [ :c | c name asLowercase includesSubstring: pattern asLowercase ].
+	classes isEmpty ifTrue: [ ^ 'No classes found matching: ' , pattern ].
+	sorted := classes asSortedCollection: [ :a :b | a name < b name ].
+	limited := sorted size > 50 ifTrue: [ sorted first: 50 ] ifFalse: [ sorted ].
+	header := sorted size > 50
+		ifTrue: [ 'Found ' , sorted size printString , ' classes (showing first 50):' , String lf ]
+		ifFalse: [ '' ].
+	^ header , (String streamContents: [ :s |
+		limited do: [ :c | s nextPutAll: c name ] separatedBy: [ s nextPut: Character lf ] ])
 ]
 
 { #category : 'tools' }
@@ -248,22 +273,7 @@ MCPPharoTools class >> listClassesTool [
 			pattern := args at: 'pattern' ifAbsent: [ '' ].
 			pattern isEmpty
 				ifTrue: [ 'Provide a non-empty pattern. The image contains thousands of classes.' ]
-				ifFalse: [
-					| classes sorted limited header |
-					classes := Smalltalk globals allClasses
-						select: [ :c | c name asLowercase includesSubstring: pattern asLowercase ].
-					classes isEmpty
-						ifTrue: [ 'No classes found matching: ' , pattern ]
-						ifFalse: [
-							sorted := classes asSortedCollection: [ :a :b | a name < b name ].
-							limited := sorted size > 50
-								ifTrue: [ sorted first: 50 ]
-								ifFalse: [ sorted ].
-							header := sorted size > 50
-								ifTrue: [ 'Found ' , sorted size printString , ' classes (showing first 50):' , String lf ]
-								ifFalse: [ '' ].
-							header , (String streamContents: [ :s |
-								limited do: [ :c | s nextPutAll: c name ] separatedBy: [ s nextPut: Character lf ] ]) ] ] ]
+				ifFalse: [ MCPPharoTools listClassesMatching: pattern ] ]
 ]
 
 { #category : 'tools' }
@@ -306,7 +316,7 @@ MCPPharoTools class >> listMethodsTool [
 				ifAbsent: [ 'Error: missing className' ] ]
 ]
 
-{ #category : 'running' }
+{ #category : 'private' }
 MCPPharoTools class >> listPackagesMatching: pattern [
 	| allPkgs filtered sorted limited |
 	allPkgs := Smalltalk packageOrganizer packages.
@@ -320,12 +330,7 @@ MCPPharoTools class >> listPackagesMatching: pattern [
 		sorted size > 200 ifTrue: [
 			s nextPutAll: 'Showing first 200 of ' , sorted size printString , ' packages';
 			nextPut: Character lf; nextPut: Character lf ].
-		limited do: [ :p |
-			| tc |
-			tc := (p classes select: [ :c | c inheritsFrom: TestCase ]) size.
-			s nextPutAll: p name , ' (' , p classes size printString , ' classes'.
-			tc > 0 ifTrue: [ s nextPutAll: ', ' , tc printString , ' test classes' ].
-			s nextPutAll: ')'; nextPut: Character lf ] ]
+		limited do: [ :p | s nextPutAll: (MCPPharoTools formatPackageSummary: p); nextPut: Character lf ] ]
 ]
 
 { #category : 'tools' }
