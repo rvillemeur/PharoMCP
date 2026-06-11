@@ -16,5 +16,6 @@ MCPInitializeLogEntry class >> toolName [
 
 { #category : 'accessing' }
 MCPInitializeLogEntry >> requestArgument [
-	^ '' 
+
+	^ ''
 ]

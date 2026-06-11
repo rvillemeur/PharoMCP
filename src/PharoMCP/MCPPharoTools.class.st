@@ -55,19 +55,18 @@ MCPPharoTools class >> classDefinitionTool [
 
 { #category : 'running' }
 MCPPharoTools class >> classHierarchyOf: className [
-	| class superchain subclasses |
-	class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
-	class isNil ifTrue: [ ^ 'Error: class not found: ' , className ].
-	superchain := class allSuperclasses reversed.
-	subclasses := class subclasses asSortedCollection: [ :a :b | a name < b name ].
+	| cls superchain subs |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	superchain := cls allSuperclasses reversed.
+	subs := cls subclasses asSortedCollection: [ :a :b | a name < b name ].
 	^ String streamContents: [ :s |
-		s nextPutAll: 'Superclass chain:'; nextPut: Character lf.
-		s nextPutAll: (((superchain collect: [ :c | c name ]) , (Array with: class name)) joinUsing: ' > ').
+		s << 'Superclass chain:'; nextPut: Character lf.
+		s << (((superchain collect: [ :c | c name ]) , (Array with: cls name)) joinUsing: ' > ').
 		s nextPut: Character lf; nextPut: Character lf.
-		s nextPutAll: 'Direct subclasses (' , subclasses size printString , '):'; nextPut: Character lf.
-		subclasses isEmpty
-			ifTrue: [ s nextPutAll: '  (none)' ]
-			ifFalse: [ subclasses do: [ :c | s nextPutAll: '  ' , c name; nextPut: Character lf ] ] ]
+		s << 'Direct subclasses ('; print: subs size; << '):'; nextPut: Character lf.
+		subs isEmpty
+			ifTrue: [ s << '  (none)' ]
+			ifFalse: [ subs do: [ :c | s << '  '; << c name; nextPut: Character lf ] ] ]
 ]
 
 { #category : 'tools' }
@@ -91,14 +90,15 @@ MCPPharoTools class >> classHierarchyTool [
 
 { #category : 'running' }
 MCPPharoTools class >> collectCritiquesForClass: aClass [
+
 	| critiques |
 	critiques := OrderedCollection new.
-	(ReCriticEngine critiquesOf: aClass) do: [:c | critiques add: c].
-	(ReCriticEngine critiquesOf: aClass class) do: [:c | critiques add: c].
-	aClass methodDictionary values do: [:m |
-		(ReCriticEngine critiquesOf: m) do: [:c | critiques add: c] ].
-	aClass class methodDictionary values do: [:m |
-		(ReCriticEngine critiquesOf: m) do: [:c | critiques add: c] ].
+	critiques addAll: (ReCriticEngine critiquesOf: aClass).
+	critiques addAll: (ReCriticEngine critiquesOf: aClass class).
+	aClass methodDictionary valuesDo: [ :m |
+		critiques addAll: (ReCriticEngine critiquesOf: m) ].
+	aClass class methodDictionary valuesDo: [ :m |
+		critiques addAll: (ReCriticEngine critiquesOf: m) ].
 	^ critiques
 ]
 
@@ -134,8 +134,8 @@ MCPPharoTools class >> findImplementorsOf: selector [
 	results isEmpty ifTrue: [ ^ 'No implementors found for: #' , selector ].
 	names := (results collect: [ :m | m methodClass name ]) asSortedCollection.
 	^ String streamContents: [ :s |
-		s nextPutAll: results size printString , ' implementors of #' , selector; nextPut: Character lf.
-		names do: [ :n | s nextPutAll: n; nextPut: Character lf ] ]
+		s print: results size; << ' implementors of #'; << selector; nextPut: Character lf.
+		names do: [ :n | s << n; nextPut: Character lf ] ]
 ]
 
 { #category : 'tools' }
@@ -163,13 +163,13 @@ MCPPharoTools class >> findSendersOf: selector [
 	selector isEmpty ifTrue: [ ^ 'Error: selector is required' ].
 	results := SystemNavigation default allSendersOf: selector asSymbol.
 	results isEmpty ifTrue: [ ^ 'No senders found for: #' , selector ].
-	sorted := (results collect: [ :m | m methodClass name , ' >> #' , m selector]) asSortedCollection.
+	sorted := (results collect: [ :m | m methodClass name , ' >> #' , m selector ]) asSortedCollection.
 	limited := sorted size > 100 ifTrue: [ sorted first: 100 ] ifFalse: [ sorted ].
 	^ String streamContents: [ :s |
 		sorted size > 100 ifTrue: [
-			s nextPutAll: 'Showing first 100 of ' , sorted size printString , ' senders';
+			s << 'Showing first 100 of '; print: sorted size; << ' senders';
 			nextPut: Character lf; nextPut: Character lf ].
-		limited do: [ :line | s nextPutAll: line; nextPut: Character lf ] ]
+		limited do: [ :line | s << line; nextPut: Character lf ] ]
 ]
 
 { #category : 'tools' }
@@ -192,20 +192,20 @@ MCPPharoTools class >> findSendersTool [
 ]
 
 { #category : 'running' }
-MCPPharoTools class >> formatCritiques: critiques forName: name [
+MCPPharoTools class >> formatCritiques: critiques forName: targetName [
 	| limited |
-	critiques isEmpty ifTrue: [ ^ 'No critiques found for: ' , name ].
+	critiques isEmpty ifTrue: [ ^ 'No critiques found for: ' , targetName ].
 	limited := critiques size > 200
 		ifTrue: [ critiques first: 200 ]
 		ifFalse: [ critiques ].
 	^ String streamContents: [ :s |
 		critiques size > 200 ifTrue: [
-			s nextPutAll: 'Showing first 200 of ' , critiques size printString , ' critiques';
+			s << 'Showing first 200 of '; print: critiques size; << ' critiques';
 			nextPut: Character lf; nextPut: Character lf ].
 		limited do: [ :c |
-			[ s nextPutAll: '[' , c rule class name , '] ' , c title.
+			[ s << '['; << c rule class name; << '] '; << c title.
 			c sourceAnchor ifNotNil: [ :a |
-				[s nextPutAll: ' (' , a entity printString , ')'] on: Error do: [ :e | ] ].
+				[ s << ' ('; << a entity printString; << ')' ] on: Error do: [ :e | ] ].
 			s nextPut: Character lf ] on: Error do: [ :e | ] ] ]
 ]
 
@@ -214,28 +214,30 @@ MCPPharoTools class >> formatPackageSummary: aPackage [
 	| tc |
 	tc := (aPackage classes select: [ :c | c inheritsFrom: TestCase ]) size.
 	^ String streamContents: [ :s |
-		s nextPutAll: aPackage name , ' (' , aPackage classes size printString , ' classes'.
-		tc > 0 ifTrue: [ s nextPutAll: ', ' , tc printString , ' test classes' ].
-		s nextPutAll: ')' ]
+		s << aPackage name; << ' ('; print: aPackage classes size; << ' classes'.
+		tc > 0 ifTrue: [ s << ', '; print: tc; << ' test classes' ].
+		s << ')' ]
 ]
 
 { #category : 'running' }
-MCPPharoTools class >> formatResult: result forName: name selector: selector [
+MCPPharoTools class >> formatResult: result forName: targetName selector: selector [
 	^ String streamContents: [ :s |
 		selector
-			ifNil: [ s nextPutAll: 'Ran ' , result runCount printString , ' tests in ' , name; nextPut: Character lf ]
-			ifNotNil: [ :sel | s nextPutAll: 'Ran ' , name , ' >> ' , sel; nextPut: Character lf ].
-		s nextPutAll: result passedCount printString , ' passed'; nextPut: Character lf.
-		s nextPutAll: result unexpectedFailureCount printString , ' failed'; nextPut: Character lf.
-		s nextPutAll: result unexpectedErrorCount printString , ' errored'; nextPut: Character lf.
+			ifNil: [
+				s << 'Ran '; print: result runCount; << ' tests in '; << targetName; nextPut: Character lf ]
+			ifNotNil: [ :sel |
+				s << 'Ran '; << targetName; << ' >> '; << sel; nextPut: Character lf ].
+		s print: result passedCount; << ' passed'; nextPut: Character lf.
+		s print: result unexpectedFailureCount; << ' failed'; nextPut: Character lf.
+		s print: result unexpectedErrorCount; << ' errored'; nextPut: Character lf.
 		result failureMessages ifNotEmpty: [
-			s nextPut: Character lf; nextPutAll: '--- Failures ---'; nextPut: Character lf.
+			s nextPut: Character lf; << '--- Failures ---'; nextPut: Character lf.
 			result failureMessages keysAndValuesDo: [ :sel :msg |
-				s nextPutAll: sel; nextPut: Character lf; nextPutAll: msg; nextPut: Character lf; nextPut: Character lf ] ].
+				s << sel; nextPut: Character lf; << msg; nextPut: Character lf; nextPut: Character lf ] ].
 		result errorMessages ifNotEmpty: [
-			s nextPut: Character lf; nextPutAll: '--- Errors ---'; nextPut: Character lf.
+			s nextPut: Character lf; << '--- Errors ---'; nextPut: Character lf.
 			result errorMessages keysAndValuesDo: [ :sel :msg |
-				s nextPutAll: sel; nextPut: Character lf; nextPutAll: msg; nextPut: Character lf; nextPut: Character lf ] ] ]
+				s << sel; nextPut: Character lf; << msg; nextPut: Character lf; nextPut: Character lf ] ] ]
 ]
 
 { #category : 'tools' }
@@ -278,59 +280,84 @@ MCPPharoTools class >> listClassesTool [
 
 { #category : 'tools' }
 MCPPharoTools class >> listMethodsTool [
+
 	^ MCPTool
-		name: 'list_methods'
-		description: 'List all method selectors defined on a class. Use side "class" for class-side methods.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'className' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Whether to list instance-side or class-side methods. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #('className');
-			yourself)
-		handler: [ :args |
-			args at: 'className'
-				ifPresent: [ :className |
-					| class side selectors |
-					class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
-					class isNil
-						ifTrue: [ 'Error: class not found: ' , className ]
-						ifFalse: [
-							side := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
-								ifTrue: [ class class ]
-								ifFalse: [ class ].
-							selectors := side methodDictionary keys asSortedCollection.
-							selectors isEmpty
-								ifTrue: [ 'No methods defined on ' , class name ]
-								ifFalse: [
-									String streamContents: [ :s |
-										selectors do: [ :sel | s nextPutAll: sel ] separatedBy: [ s nextPut: Character lf ] ] ] ] ]
-				ifAbsent: [ 'Error: missing className' ] ]
+		  name: 'list_methods'
+		  description:
+		  'List all method selectors defined on a class. Use side "class" for class-side methods.'
+		  schema: (Dictionary new
+				   at: 'type' put: 'object';
+				   at: 'properties' put: (Dictionary new
+						    at: 'className' put: (Dictionary new
+								     at: 'type' put: 'string';
+								     at: 'description' put: 'Name of the class';
+								     yourself);
+						    at: 'side' put: (Dictionary new
+							     at: 'type' put: 'string';
+							     at: 'enum' put: #( 'instance' 'class' );
+							     at: 'description'
+							     put:
+								     'Whether to list instance-side or class-side methods. Defaults to instance.';
+							     yourself);
+						    yourself);
+				   at: 'required' put: #( 'className' );
+				   yourself)
+		  handler: [ :args |
+				  args
+					  at: 'className'
+					  ifPresent: [ :className |
+							  | class side selectors |
+							  class := Smalltalk globals
+								           at: className asSymbol
+								           ifAbsent: [ nil ].
+							  class
+								  ifNil: [ 'Error: class not found: ' , className ]
+								  ifNotNil: [
+										  side := (args at: 'side' ifAbsent: [ 'instance' ])
+										          = 'class'
+											          ifTrue: [ class class ]
+											          ifFalse: [ class ].
+										  selectors := side methodDictionary keys asSortedCollection.
+										  selectors isEmpty
+											  ifTrue: [ 'No methods defined on ' , class name ]
+											  ifFalse: [
+													  String streamContents: [ :s |
+															  selectors
+																  do: [ :sel | s nextPutAll: sel ]
+																  separatedBy: [ s nextPut: Character lf ] ] ] ] ]
+					  ifAbsent: [ 'Error: missing className' ] ]
 ]
 
 { #category : 'private' }
 MCPPharoTools class >> listPackagesMatching: pattern [
+
 	| allPkgs filtered sorted limited |
 	allPkgs := Smalltalk packageOrganizer packages.
-	filtered := (pattern isNil or: [ pattern isEmpty ])
-		ifTrue: [ allPkgs ]
-		ifFalse: [ allPkgs select: [ :p | p name asLowercase includesSubstring: pattern asLowercase ] ].
-	filtered isEmpty ifTrue: [ ^ 'No packages found matching: ' , pattern ].
+	filtered := pattern ifNil: [ allPkgs ] ifNotNil: [ :pat |
+			            pat isEmpty
+				            ifTrue: [ allPkgs ]
+				            ifFalse: [
+						            allPkgs select: [ :p |
+							            p name asLowercase includesSubstring:
+								            pat asLowercase ] ] ].
+	filtered isEmpty ifTrue: [
+		^ 'No packages found matching: ' , pattern printString ].
 	sorted := filtered asSortedCollection: [ :a :b | a name < b name ].
-	limited := sorted size > 200 ifTrue: [ sorted first: 200 ] ifFalse: [ sorted ].
+	limited := sorted size > 200
+		           ifTrue: [ sorted first: 200 ]
+		           ifFalse: [ sorted ].
 	^ String streamContents: [ :s |
-		sorted size > 200 ifTrue: [
-			s nextPutAll: 'Showing first 200 of ' , sorted size printString , ' packages';
-			nextPut: Character lf; nextPut: Character lf ].
-		limited do: [ :p | s nextPutAll: (MCPPharoTools formatPackageSummary: p); nextPut: Character lf ] ]
+			  sorted size > 200 ifTrue: [
+					  s
+						  << 'Showing first 200 of ';
+						  print: sorted size;
+						  << ' packages';
+						  nextPut: Character lf;
+						  nextPut: Character lf ].
+			  limited do: [ :p |
+					  s
+						  << (self formatPackageSummary: p);
+						  nextPut: Character lf ] ]
 ]
 
 { #category : 'tools' }
@@ -351,47 +378,59 @@ MCPPharoTools class >> listPackagesTool [
 
 { #category : 'tools' }
 MCPPharoTools class >> methodSourceTool [
+
 	^ MCPTool
-		name: 'method_source'
-		description: 'Get the source code of a method. Use side "class" for class-side methods, "instance" for instance-side methods.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'className' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'methodName' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Selector of the method (e.g. "add:" or "printOn:")';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Whether to look on the instance side or class side. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #('className' 'methodName');
-			yourself)
-		handler: [ :args |
-			args at: 'className'
-				ifPresent: [ :className |
-					args at: 'methodName'
-						ifPresent: [ :methodName |
-							| class side |
-							class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
-							class isNil
-								ifTrue: [ 'Error: class not found: ' , className ]
-								ifFalse: [
-									side := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
-										ifTrue: [ class class ]
-										ifFalse: [ class ].
-									side methodDictionary
-										at: methodName asSymbol
-										ifPresent: [ :method | method sourceCode ]
-										ifAbsent: [ 'Error: method not found: ' , methodName , ' in ' , class name ] ] ]
-						ifAbsent: [ 'Error: missing methodName' ] ]
-				ifAbsent: [ 'Error: missing className' ] ]
+		  name: 'method_source'
+		  description:
+		  'Get the source code of a method. Use side "class" for class-side methods, "instance" for instance-side methods.'
+		  schema: (Dictionary new
+				   at: 'type' put: 'object';
+				   at: 'properties' put: (Dictionary new
+						    at: 'className' put: (Dictionary new
+								     at: 'type' put: 'string';
+								     at: 'description' put: 'Name of the class';
+								     yourself);
+						    at: 'methodName' put: (Dictionary new
+							     at: 'type' put: 'string';
+							     at: 'description'
+							     put: 'Selector of the method (e.g. "add:" or "printOn:")';
+							     yourself);
+						    at: 'side' put: (Dictionary new
+							     at: 'type' put: 'string';
+							     at: 'enum' put: #( 'instance' 'class' );
+							     at: 'description'
+							     put:
+								     'Whether to look on the instance side or class side. Defaults to instance.';
+							     yourself);
+						    yourself);
+				   at: 'required' put: #( 'className' 'methodName' );
+				   yourself)
+		  handler: [ :args |
+				  args
+					  at: 'className'
+					  ifPresent: [ :className |
+							  args
+								  at: 'methodName'
+								  ifPresent: [ :methodName |
+										  | class side |
+										  class := Smalltalk globals
+											           at: className asSymbol
+											           ifAbsent: [ nil ].
+										  class
+											  ifNil: [ 'Error: class not found: ' , className ]
+											  ifNotNil: [
+													  side := (args at: 'side' ifAbsent: [ 'instance' ])
+													          = 'class'
+														          ifTrue: [ class class ]
+														          ifFalse: [ class ].
+													  side methodDictionary
+														  at: methodName asSymbol
+														  ifPresent: [ :method | method sourceCode ]
+														  ifAbsent: [
+														  'Error: method not found: ' , methodName , ' in '
+														  , class name ] ] ]
+								  ifAbsent: [ 'Error: missing methodName' ] ]
+					  ifAbsent: [ 'Error: missing className' ] ]
 ]
 
 { #category : 'registration' }
@@ -401,21 +440,18 @@ MCPPharoTools class >> registerToolsWith: aProcessor [
 
 { #category : 'running' }
 MCPPharoTools class >> runCriticsOnClass: className [
-	| class critiques |
-	class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
-	class isNil ifTrue: [ ^ 'Error: class not found: ' , className ].
-	critiques := self collectCritiquesForClass: class.
+	| cls critiques |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	critiques := self collectCritiquesForClass: cls.
 	^ self formatCritiques: critiques forName: className
 ]
 
 { #category : 'running' }
 MCPPharoTools class >> runCriticsOnPackage: packageName [
 	| pkg critiques |
-	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ nil ].
-	pkg isNil ifTrue: [ ^ 'Error: package not found: ' , packageName ].
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
 	critiques := OrderedCollection new.
-	pkg classes do: [ :cls |
-		(self collectCritiquesForClass: cls) do: [ :c | critiques add: c ] ].
+	pkg classes do: [ :cls | critiques addAll: (self collectCritiquesForClass: cls) ].
 	^ self formatCritiques: critiques forName: packageName
 ]
 
@@ -443,16 +479,15 @@ MCPPharoTools class >> runCriticsTool [
 
 { #category : 'running' }
 MCPPharoTools class >> runTestsForClass: className selector: selector [
-	| class suite result |
-	class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
-	class isNil ifTrue: [ ^ 'Error: class not found: ' , className ].
-	(class inheritsFrom: TestCase) ifFalse: [
+	| cls suite result |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	(cls inheritsFrom: TestCase) ifFalse: [
 		^ 'Error: ' , className , ' is not a TestCase subclass' ].
 	suite := selector
-		ifNil: [ class suite ]
+		ifNil: [ cls suite ]
 		ifNotNil: [ :sel |
 			TestSuite new
-				addTest: (class selector: sel asSymbol);
+				addTest: (cls selector: sel asSymbol);
 				yourself ].
 	result := MCPTestResult new.
 	suite run: result.
@@ -462,8 +497,7 @@ MCPPharoTools class >> runTestsForClass: className selector: selector [
 { #category : 'running' }
 MCPPharoTools class >> runTestsInPackage: packageName [
 	| pkg classes suite result |
-	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ nil ].
-	pkg isNil ifTrue: [ ^ 'Error: package not found: ' , packageName ].
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
 	classes := pkg classes select: [ :c | c inheritsFrom: TestCase ].
 	classes isEmpty ifTrue: [ ^ 'Error: no TestCase subclasses in package: ' , packageName ].
 	suite := TestSuite new.

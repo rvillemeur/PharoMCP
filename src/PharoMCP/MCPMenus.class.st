@@ -12,11 +12,13 @@ Class {
 { #category : 'menu' }
 MCPMenus class >> buildWorldMenu: aBuilder [
 	<worldMenu>
-	(aBuilder item: #PharoMCPServer)
-		parent: #Tools;
+	(aBuilder item: #PharoMCP)
+		order: 20.0;
+		with: [ (aBuilder item: #PharoMCPServer)
+		parent: #PharoMCP;
 		label: 'MCP Server';
 		action: [ MCPServerPresenter open ];
 		iconName: #glamorousTable;
-		order: 40;
-		yourself
+		order: 0;
+		help: 'launch Pharo MCP server'.]
 ]

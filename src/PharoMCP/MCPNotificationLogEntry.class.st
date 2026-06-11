@@ -11,5 +11,6 @@ Class {
 
 { #category : 'accessing' }
 MCPNotificationLogEntry >> requestArgument [
-	^ '' 
+
+	^ ''
 ]

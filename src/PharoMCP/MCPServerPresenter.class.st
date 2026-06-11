@@ -215,11 +215,11 @@ MCPServerPresenter >> updateTitle [
 	self withWindowDo: [ :w | w title: self windowTitle ]
 ]
 
-{ #category : 'private' }
+{ #category : 'accessing' }
 MCPServerPresenter >> windowTitle [
-	server isNil ifTrue: [ ^ 'PharoMCP Server' ].
-	^ 'PharoMCP Server — ' ,
-		(server isRunning
-			ifTrue: [ 'running on port ' , server port printString ]
-			ifFalse: [ 'not running' ])
+
+	server ifNil: [ ^ 'PharoMCP Server' ].
+	^ 'PharoMCP Server — ' , (server isRunning
+		   ifTrue: [ 'running on port ' , server port printString ]
+		   ifFalse: [ 'not running' ])
 ]

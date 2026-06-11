@@ -111,6 +111,8 @@ MCPRequestProcessor >> handleToolsList: params id: id [
 
 { #category : 'initialization' }
 MCPRequestProcessor >> initialize [
+
+	super initialize.
 	tools := Dictionary new
 ]
 

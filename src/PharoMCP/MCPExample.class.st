@@ -95,5 +95,5 @@ MCPExample class >> stop [
 ]
 
 { #category : 'see class side' }
-MCPExample >> seeClassSide [ 
+MCPExample >> seeClassSide [
 ]

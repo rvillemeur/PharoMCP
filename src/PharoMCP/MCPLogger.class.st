@@ -47,6 +47,8 @@ MCPLogger >> exportAsJson [
 
 { #category : 'initialization' }
 MCPLogger >> initialize [
+
+	super initialize.
 	entries := OrderedCollection new
 ]
 

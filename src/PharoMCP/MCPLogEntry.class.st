@@ -48,10 +48,11 @@ MCPLogEntry >> asDictionary [
 
 { #category : 'accessing' }
 MCPLogEntry >> displayArgs [
-	toolArgs isNil ifTrue: [ ^ '' ].
+
+	toolArgs ifNil: [ ^ '' ].
 	^ toolArgs size > 80
-		ifTrue: [ (toolArgs copyFrom: 1 to: 80) , '...' ]
-		ifFalse: [ toolArgs ]
+		  ifTrue: [ (toolArgs copyFrom: 1 to: 80) , '...' ]
+		  ifFalse: [ toolArgs ]
 ]
 
 { #category : 'accessing' }

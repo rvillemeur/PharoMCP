@@ -16,5 +16,6 @@ MCPToolsListLogEntry class >> toolName [
 
 { #category : 'accessing' }
 MCPToolsListLogEntry >> requestArgument [
-	^ '' 
+
+	^ ''
 ]

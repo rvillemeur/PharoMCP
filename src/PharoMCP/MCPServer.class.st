@@ -121,6 +121,8 @@ MCPServer >> handleRequest: request into: response [
 
 { #category : 'initialization' }
 MCPServer >> initialize [
+
+	super initialize.
 	port := 7777.
 	processor := MCPRequestProcessor new.
 	MCPPharoTools registerToolsWith: processor.
@@ -169,7 +171,7 @@ MCPServer >> start [
 	httpServer := ZnServer on: port.
 	httpServer delegate: self.
 	httpServer start.
-	Transcript show: 'PharoMCP running on http://localhost:' , port printString; cr.
+	Transcript show: 'PharoMCP running on http://localhost:' << port printString; cr.
 	announcer announce: MCPServerStarted new
 ]
 
