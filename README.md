@@ -75,7 +75,7 @@ Push this repository to GitHub, then in a Pharo 10/11 image open a Playground an
 ```smalltalk
 Metacello new
     baseline: 'PharoMCP';
-    repository: 'github://YOUR_USERNAME/PharoMCP/main:src';
+    repository: 'github://rvillemeur/PharoMCP:main/src';
     load.
 ```
 
