@@ -23,10 +23,40 @@ MCPPharoTools class >> allTools [
 	^ (OrderedCollection new
 		add: self evaluateTool; add: self listClassesTool; add: self classDefinitionTool;
 		add: self methodSourceTool; add: self compileMethodTool; add: self deleteMethodTool;
-		add: self createClassTool; add: self listMethodsTool; add: self searchSourceTool;
+		add: self createClassTool; add: self removeClassTool; add: self classCommentTool;
+		add: self listMethodsTool; add: self searchSourceTool;
 		add: self runTestsTool; add: self runCriticsTool; add: self findSendersTool;
 		add: self findImplementorsTool; add: self listPackagesTool; add: self classHierarchyTool;
 		yourself) asArray
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> classCommentTool [
+	^ MCPTool
+		name: 'class_comment'
+		description: 'Get or set the comment (documentation) on a class. Omit the comment parameter to read; supply it to write.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'class_name' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Name of the class';
+					yourself);
+				at: 'comment' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'New comment text. Omit to read the current comment.';
+					yourself);
+				yourself);
+			at: 'required' put: #('class_name');
+			yourself)
+		handler: [ :args |
+			| className comment |
+			className := args at: 'class_name' ifAbsent: [ nil ].
+			className ifNil: [ 'Error: class_name is required' ] ifNotNil: [
+				comment := args at: 'comment' ifAbsent: [ nil ].
+				comment
+					ifNil: [ MCPPharoTools getClassComment: className ]
+					ifNotNil: [ MCPPharoTools setClassComment: comment onClass: className ] ] ]
 ]
 
 { #category : 'tools' }
@@ -406,6 +436,14 @@ MCPPharoTools class >> formatResult: result forName: targetName selector: select
 				s << sel; nextPut: Character lf; << msg; nextPut: Character lf; nextPut: Character lf ] ] ]
 ]
 
+{ #category : 'running' }
+MCPPharoTools class >> getClassComment: className [
+	| cls |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls comment isEmpty ifTrue: [ ^ '(no comment)' ].
+	^ cls comment
+]
+
 { #category : 'tools' }
 MCPPharoTools class >> listClassesMatching: pattern [
 	| classes sorted limited header |
@@ -593,6 +631,38 @@ MCPPharoTools class >> registerToolsWith: aProcessor [
 ]
 
 { #category : 'running' }
+MCPPharoTools class >> removeClass: className [
+	| cls |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls subclasses isEmpty ifFalse: [
+		^ 'Error: class has subclasses: ' , ((cls subclasses collect: [ :c | c name ]) joinUsing: ', ') ].
+	cls removeFromSystem.
+	^ 'Removed: ' , className
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> removeClassTool [
+	^ MCPTool
+		name: 'class_remove'
+		description: 'Remove a class from the image. Fails if the class has subclasses. Cannot be undone — verify the class name before calling.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'class_name' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Name of the class to remove';
+					yourself);
+				yourself);
+			at: 'required' put: #('class_name');
+			yourself)
+		handler: [ :args |
+			| className |
+			className := args at: 'class_name' ifAbsent: [ nil ].
+			className ifNil: [ 'Error: class_name is required' ]
+			ifNotNil: [ MCPPharoTools removeClass: className ] ]
+]
+
+{ #category : 'running' }
 MCPPharoTools class >> runCriticsOnClass: className [
 	| cls critiques |
 	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
@@ -760,6 +830,14 @@ MCPPharoTools class >> searchSourceTool [
 						className
 							ifNotNil: [ self searchSourceFor: pattern inClass: className caseSensitive: cs ]
 							ifNil: [ 'Error: provide class_name or package' ] ] ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> setClassComment: comment onClass: className [
+	| cls |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls comment: comment.
+	^ 'Comment set on: ' , className
 ]
 
 { #category : 'private' }

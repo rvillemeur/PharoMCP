@@ -5,6 +5,11 @@ Class {
 	#package : 'PharoMCP-Tests'
 }
 
+{ #category : 'tests - classComment' }
+MCPPharoToolsRunningTest >> testClassCommentToolHasCorrectName [
+	self assert: MCPPharoTools classCommentTool name equals: 'class_comment'
+]
+
 { #category : 'tests - classHierarchy' }
 MCPPharoToolsRunningTest >> testClassHierarchyOfLeafShowsNone [
 	| r |
@@ -323,6 +328,28 @@ MCPPharoToolsRunningTest >> testFormatResultWithSelector [
 	self assert: (r includesSubstring: 'myTest')
 ]
 
+{ #category : 'tests - classComment' }
+MCPPharoToolsRunningTest >> testGetClassCommentNoComment [
+	| r |
+	r := MCPPharoTools getClassComment: 'MCPPharoToolsRunningTest'.
+	self assert: r equals: '(no comment)'
+]
+
+{ #category : 'tests - classComment' }
+MCPPharoToolsRunningTest >> testGetClassCommentReturnsComment [
+	| r |
+	r := MCPPharoTools getClassComment: 'MCPServer'.
+	self deny: (r beginsWith: 'Error')
+]
+
+{ #category : 'tests - classComment' }
+MCPPharoToolsRunningTest >> testGetClassCommentUnknownClass [
+	| r |
+	r := MCPPharoTools getClassComment: 'NoSuchClassXYZ'.
+	self assert: (r beginsWith: 'Error').
+	self assert: (r includesSubstring: 'NoSuchClassXYZ')
+]
+
 { #category : 'tests - listMethods' }
 MCPPharoToolsRunningTest >> testListMethodsClassSideIncludesProtocol [
 	| tool result |
@@ -361,6 +388,45 @@ MCPPharoToolsRunningTest >> testListMethodsSortedByProtocolThenSelector [
 { #category : 'tests - listMethods' }
 MCPPharoToolsRunningTest >> testListMethodsToolHasCorrectName [
 	self assert: MCPPharoTools listMethodsTool name equals: 'list_methods'
+]
+
+{ #category : 'tests - removeClass' }
+MCPPharoToolsRunningTest >> testRemoveClassSuccess [
+	| result className |
+	className := 'MCPTestTempRemoveDDD'.
+	MCPPharoTools createClass: className superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	result := MCPPharoTools removeClass: className.
+	self assert: (result beginsWith: 'Removed:').
+	self assert: (result includesSubstring: className).
+	self deny: (Smalltalk globals includesKey: className asSymbol)
+]
+
+{ #category : 'tests - removeClass' }
+MCPPharoToolsRunningTest >> testRemoveClassToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'class_remove' ])
+]
+
+{ #category : 'tests - removeClass' }
+MCPPharoToolsRunningTest >> testRemoveClassUnknown [
+	| result |
+	result := MCPPharoTools removeClass: 'NoSuchClassXYZ'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+]
+
+{ #category : 'tests - removeClass' }
+MCPPharoToolsRunningTest >> testRemoveClassWithSubclassesFails [
+	| parent child result |
+	parent := 'MCPTestTempParentEEE'.
+	child := 'MCPTestTempChildEEE'.
+	[ MCPPharoTools createClass: parent superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	MCPPharoTools createClass: child superclass: parent instanceVariables: #() package: 'PharoMCP-Tests'.
+	result := MCPPharoTools removeClass: parent.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'subclass') ]
+	ensure: [
+		(Smalltalk globals includesKey: child asSymbol) ifTrue: [ (Smalltalk globals at: child asSymbol) removeFromSystem ].
+		(Smalltalk globals includesKey: parent asSymbol) ifTrue: [ (Smalltalk globals at: parent asSymbol) removeFromSystem ] ]
 ]
 
 { #category : 'tests - runCritics' }
@@ -506,4 +572,14 @@ MCPPharoToolsRunningTest >> testSearchSourceToolHasCorrectName [
 { #category : 'tests - searchSource' }
 MCPPharoToolsRunningTest >> testSearchSourceToolInAllTools [
 	self assert: (MCPPharoTools allTools anySatisfy: [:t | t name = 'search_source'])
+]
+
+{ #category : 'tests - classComment' }
+MCPPharoToolsRunningTest >> testSetClassCommentRoundtrip [
+	| original r |
+	original := MCPPharoToolsRunningTest comment.
+	[ r := MCPPharoTools setClassComment: 'Test comment XYZ' onClass: 'MCPPharoToolsRunningTest'.
+	self assert: (r beginsWith: 'Comment set on:').
+	self assert: (MCPPharoTools getClassComment: 'MCPPharoToolsRunningTest') equals: 'Test comment XYZ' ]
+	ensure: [ MCPPharoToolsRunningTest comment: original ]
 ]
