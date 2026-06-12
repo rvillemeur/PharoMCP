@@ -20,6 +20,22 @@ MCPServerTest >> tearDown [
 	super tearDown
 ]
 
+{ #category : 'tests - private' }
+MCPServerTest >> testBuildResponseForNilReturns200NoBody [
+	| response |
+	response := server buildResponseFor: nil.
+	self assert: response statusLine code equals: 200.
+	self assert: response entity isNil
+]
+
+{ #category : 'tests - private' }
+MCPServerTest >> testBuildResponseForStringReturnsJsonResponse [
+	| response |
+	response := server buildResponseFor: '{"result":42}'.
+	self assert: response statusLine code equals: 200.
+	self assert: response entity contentType equals: ZnMimeType applicationJson
+]
+
 { #category : 'tests' }
 MCPServerTest >> testCustomPort [
 	self assert: server port equals: 17777
@@ -30,6 +46,37 @@ MCPServerTest >> testDefaultPort [
 	| defaultServer |
 	defaultServer := MCPServer default.
 	self assert: defaultServer port equals: 7777
+]
+
+{ #category : 'tests - private' }
+MCPServerTest >> testExtractBodyFromRequestWithEntity [
+	| request |
+	request := ZnRequest post: 'http://localhost/'.
+	request entity: (ZnEntity with: '{"test":1}' type: ZnMimeType applicationJson).
+	self assert: (server extractBodyFrom: request) equals: '{"test":1}'
+]
+
+{ #category : 'tests - private' }
+MCPServerTest >> testExtractBodyFromRequestWithoutEntity [
+	| request |
+	request := ZnRequest post: 'http://localhost/'.
+	self assert: (server extractBodyFrom: request) equals: '{}'
+]
+
+{ #category : 'tests - private' }
+MCPServerTest >> testHandleNonPostRequest [
+	| response |
+	response := server handleNonPostRequest.
+	self assert: response statusLine code equals: 405.
+	self assert: response entity string equals: 'Method Not Allowed'
+]
+
+{ #category : 'tests - private' }
+MCPServerTest >> testHandleOptionsRequest [
+	| response |
+	response := server handleOptionsRequest.
+	self assert: response statusLine code equals: 200.
+	self assert: (response headers at: 'Access-Control-Allow-Origin') equals: '*'
 ]
 
 { #category : 'tests' }
@@ -89,6 +136,15 @@ MCPServerTest >> testInitializesWithPharoTools [
 	self assert: (tools includesKey: 'list_methods')
 ]
 
+{ #category : 'tests - private' }
+MCPServerTest >> testLogRequestResponseAbsorbsErrors [
+	"logRequest:response: must never propagate — server absorbs logging errors"
+	| logger |
+	logger := MCPNullLogger new.
+	server instVarAt: (MCPServer instVarIndexFor: #logger ifAbsent: [1]) put: logger.
+	self shouldnt: [ server logRequest: '{}' response: nil ] raise: Error
+]
+
 { #category : 'tests' }
 MCPServerTest >> testNotRunningBeforeStart [
 	self deny: server isRunning
@@ -104,6 +160,23 @@ MCPServerTest >> testRegisterCustomTool [
 		handler: [ :args | 'custom result' ].
 	server registerTool: customTool.
 	self assert: (server processor tools includesKey: 'custom')
+]
+
+{ #category : 'tests - private' }
+MCPServerTest >> testSafeProcessReturnsErrorJsonOnBadInput [
+	| result parsed |
+	result := server safeProcess: 'not json at all'.
+	parsed := NeoJSONReader fromString: result.
+	self assert: (parsed includesKey: 'error').
+	self assert: ((parsed at: 'error') includesKey: 'code')
+]
+
+{ #category : 'tests - private' }
+MCPServerTest >> testSafeProcessValidRequest [
+	| body result |
+	body := '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'.
+	result := server safeProcess: body.
+	self assert: (result includesSubstring: 'tools')
 ]
 
 { #category : 'tests' }

@@ -56,6 +56,68 @@ MCPPharoToolsExtendedTest >> testClassHierarchyToolRegistered [
 	self assert: (processor tools includesKey: 'class_hierarchy')
 ]
 
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCompileMethodToolMissingArgs [
+	| r |
+	r := self call: 'compile_method' args: Dictionary new.
+	self assert: (r beginsWith: 'Error')
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCompileMethodToolRegistered [
+	self assert: (processor tools includesKey: 'compile_method')
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCompileMethodToolSuccess [
+	| r |
+	r := self call: 'compile_method' args: (Dictionary new
+		at: 'class_name' put: 'MCPPharoToolsExtendedTest';
+		at: 'source' put: 'extendedTestCanary ^ 123';
+		at: 'protocol' put: 'private';
+		yourself).
+	self assert: (r beginsWith: 'Compiled:').
+	self assert: (MCPPharoToolsExtendedTest new extendedTestCanary = 123).
+	MCPPharoToolsExtendedTest removeSelector: #extendedTestCanary
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCompileMethodToolUnknownClass [
+	| r |
+	r := self call: 'compile_method' args: (Dictionary new
+		at: 'class_name' put: 'NoSuchClassXYZ';
+		at: 'source' put: 'foo ^ 1';
+		yourself).
+	self assert: (r beginsWith: 'Error')
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testDeleteMethodToolRegistered [
+	self assert: (processor tools includesKey: 'delete_method')
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testDeleteMethodToolSuccess [
+	| r |
+	MCPPharoToolsExtendedTest compile: 'extendedDeleteCanary ^ 0' classified: 'private'.
+	r := self call: 'delete_method' args: (Dictionary new
+		at: 'class_name' put: 'MCPPharoToolsExtendedTest';
+		at: 'selector' put: 'extendedDeleteCanary';
+		yourself).
+	self assert: (r beginsWith: 'Deleted:').
+	self deny: (MCPPharoToolsExtendedTest includesSelector: #extendedDeleteCanary)
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testDeleteMethodToolUnknownSelector [
+	| r |
+	r := self call: 'delete_method' args: (Dictionary new
+		at: 'class_name' put: 'MCPPharoToolsExtendedTest';
+		at: 'selector' put: 'noSuchXYZ';
+		yourself).
+	self assert: (r beginsWith: 'Error')
+]
+
 { #category : 'tests - find_implementors' }
 MCPPharoToolsExtendedTest >> testFindImplementorsOnMissingSelector [
 	self assert: ((self call: 'find_implementors' args: Dictionary new) beginsWith: 'Error')
@@ -184,4 +246,9 @@ MCPPharoToolsExtendedTest >> testRunCriticsSchemaHasClassNameAndPackage [
 { #category : 'tests - run_critics' }
 MCPPharoToolsExtendedTest >> testRunCriticsToolRegistered [
 	self assert: (processor tools includesKey: 'run_critics')
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testSearchSourceToolRegistered [
+	self assert: (processor tools includesKey: 'search_source')
 ]

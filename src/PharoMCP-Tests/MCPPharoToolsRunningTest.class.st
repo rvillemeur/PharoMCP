@@ -51,6 +51,132 @@ MCPPharoToolsRunningTest >> testCollectCritiquesIncludesBothSides [
 	self assert: combined size >= instanceOnly size
 ]
 
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodClassSide [
+	| result |
+	result := MCPPharoTools compileMethod: 'compileTestClassMethod ^ 77'
+		onClass: 'MCPPharoToolsRunningTest'
+		side: 'class'
+		classified: 'private'.
+	self assert: (result includesSubstring: 'class').
+	self assert: MCPPharoToolsRunningTest compileTestClassMethod equals: 77.
+	MCPPharoToolsRunningTest class removeSelector: #compileTestClassMethod
+]
+
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodNormalisesLF [
+	| lfSource result |
+	lfSource := 'lfTestMethod
+	^ 55'.
+	result := MCPPharoTools compileMethod: lfSource
+		onClass: 'MCPPharoToolsRunningTest'
+		side: 'instance'
+		classified: 'private'.
+	self assert: (result beginsWith: 'Compiled:').
+	self assert: MCPPharoToolsRunningTest new lfTestMethod equals: 55.
+	MCPPharoToolsRunningTest removeSelector: #lfTestMethod
+]
+
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodSuccess [
+	| result |
+	result := MCPPharoTools compileMethod: 'compileTestMethod ^ 99'
+		onClass: 'MCPPharoToolsRunningTest'
+		side: 'instance'
+		classified: 'private'.
+	self assert: (result beginsWith: 'Compiled:').
+	self assert: (result includesSubstring: 'compileTestMethod').
+	self assert: MCPPharoToolsRunningTest new compileTestMethod equals: 99.
+	MCPPharoToolsRunningTest removeSelector: #compileTestMethod
+]
+
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodSyntaxError [
+	| result |
+	result := MCPPharoTools compileMethod: 'this is not valid smalltalk !!!'
+		onClass: 'MCPPharoToolsRunningTest'
+		side: 'instance'
+		classified: 'private'.
+	self assert: (result beginsWith: 'Error')
+]
+
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodToolHasCorrectName [
+	| tool |
+	tool := MCPPharoTools compileMethodTool.
+	self assert: tool name equals: 'compile_method'
+]
+
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [:t | t name = 'compile_method'])
+]
+
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodToolSchemaRequiresClassAndSource [
+	| tool schema required |
+	tool := MCPPharoTools compileMethodTool.
+	schema := tool inputSchema.
+	required := schema at: 'required'.
+	self assert: (required includes: 'class_name').
+	self assert: (required includes: 'source')
+]
+
+{ #category : 'tests - compileMethod' }
+MCPPharoToolsRunningTest >> testCompileMethodUnknownClass [
+	| result |
+	result := MCPPharoTools compileMethod: 'foo ^ 1'
+		onClass: 'NoSuchClassXYZ'
+		side: 'instance'
+		classified: 'private'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+]
+
+{ #category : 'tests - deleteMethod' }
+MCPPharoToolsRunningTest >> testDeleteMethodClassSide [
+	| result |
+	MCPPharoToolsRunningTest class compile: 'tempDeleteMeClass ^ 0' classified: 'private'.
+	result := MCPPharoTools deleteMethod: 'tempDeleteMeClass' fromClass: 'MCPPharoToolsRunningTest' side: 'class'.
+	self assert: (result includesSubstring: 'class').
+	self deny: (MCPPharoToolsRunningTest class includesSelector: #tempDeleteMeClass)
+]
+
+{ #category : 'tests - deleteMethod' }
+MCPPharoToolsRunningTest >> testDeleteMethodSuccess [
+	| result |
+	MCPPharoToolsRunningTest compile: 'tempDeleteMe ^ 0' classified: 'private'.
+	result := MCPPharoTools deleteMethod: 'tempDeleteMe' fromClass: 'MCPPharoToolsRunningTest' side: 'instance'.
+	self assert: (result beginsWith: 'Deleted:').
+	self deny: (MCPPharoToolsRunningTest includesSelector: #tempDeleteMe)
+]
+
+{ #category : 'tests - deleteMethod' }
+MCPPharoToolsRunningTest >> testDeleteMethodToolHasCorrectName [
+	self assert: MCPPharoTools deleteMethodTool name equals: 'delete_method'
+]
+
+{ #category : 'tests - deleteMethod' }
+MCPPharoToolsRunningTest >> testDeleteMethodToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [:t | t name = 'delete_method'])
+]
+
+{ #category : 'tests - deleteMethod' }
+MCPPharoToolsRunningTest >> testDeleteMethodUnknownClass [
+	| result |
+	result := MCPPharoTools deleteMethod: 'foo' fromClass: 'NoSuchClassXYZ' side: 'instance'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+]
+
+{ #category : 'tests - deleteMethod' }
+MCPPharoToolsRunningTest >> testDeleteMethodUnknownSelector [
+	| result |
+	result := MCPPharoTools deleteMethod: 'noSuchSelectorXYZ' fromClass: 'MCPPharoToolsRunningTest' side: 'instance'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'noSuchSelectorXYZ')
+]
+
 { #category : 'tests - findImplementors' }
 MCPPharoToolsRunningTest >> testFindImplementorsOfEmptySelector [
 	| r |
@@ -107,17 +233,18 @@ MCPPharoToolsRunningTest >> testFormatCritiquesEmpty [
 MCPPharoToolsRunningTest >> testFormatResultNilSelector [
 	| result r |
 	result := MCPTestResult new.
-	r := MCPPharoTools formatResult: result forName: 'MyClass' selector: nil.
+	r := MCPPharoTools formatResult: result forName: 'MyClass' selector: nil duration: 42.
 	self assert: (r includesSubstring: 'Ran').
 	self assert: (r includesSubstring: 'MyClass').
-	self assert: (r includesSubstring: 'passed')
+	self assert: (r includesSubstring: 'passed').
+	self assert: (r includesSubstring: '42 ms')
 ]
 
 { #category : 'tests - formatResult' }
 MCPPharoToolsRunningTest >> testFormatResultWithSelector [
 	| result r |
 	result := MCPTestResult new.
-	r := MCPPharoTools formatResult: result forName: 'MyClass' selector: 'myTest'.
+	r := MCPPharoTools formatResult: result forName: 'MyClass' selector: 'myTest' duration: 0.
 	self assert: (r includesSubstring: 'MyClass').
 	self assert: (r includesSubstring: 'myTest')
 ]
@@ -198,4 +325,57 @@ MCPPharoToolsRunningTest >> testRunTestsInPackageUnknown [
 	r := MCPPharoTools runTestsInPackage: 'NoSuchPkgXYZ'.
 	self assert: (r beginsWith: 'Error').
 	self assert: (r includesSubstring: 'NoSuchPkgXYZ')
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceCaseSensitiveMiss [
+	| r |
+	r := MCPPharoTools searchSourceFor: 'PASSEDCOUNT' inClass: 'MCPPharoTools' caseSensitive: true.
+	self assert: (r includesSubstring: 'No methods found')
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceInClassFindsMatch [
+	| r |
+	r := MCPPharoTools searchSourceFor: 'passedCount' inClass: 'MCPPharoTools' caseSensitive: false.
+	self assert: (r includesSubstring: 'formatResult')
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceInClassNoMatch [
+	| r |
+	r := MCPPharoTools searchSourceFor: 'xyzNoSuchPatternABC' inClass: 'MCPPharoTools' caseSensitive: false.
+	self assert: (r includesSubstring: 'No methods found')
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceInClassUnknown [
+	| r |
+	r := MCPPharoTools searchSourceFor: 'foo' inClass: 'NoSuchClassXYZ' caseSensitive: false.
+	self assert: (r beginsWith: 'Error')
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceInPackageFindsMatch [
+	| r |
+	r := MCPPharoTools searchSourceFor: 'processRawRequest' inPackage: 'PharoMCP' caseSensitive: false.
+	self deny: (r beginsWith: 'Error').
+	self assert: (r includesSubstring: '>>')
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceInPackageUnknown [
+	| r |
+	r := MCPPharoTools searchSourceFor: 'foo' inPackage: 'NoSuchPkgXYZ' caseSensitive: false.
+	self assert: (r beginsWith: 'Error')
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceToolHasCorrectName [
+	self assert: MCPPharoTools searchSourceTool name equals: 'search_source'
+]
+
+{ #category : 'tests - searchSource' }
+MCPPharoToolsRunningTest >> testSearchSourceToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [:t | t name = 'search_source'])
 ]
