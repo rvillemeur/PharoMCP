@@ -8,13 +8,57 @@ MCP (Model Context Protocol) server for Pharo Smalltalk. Runs locally over HTTP,
 
 ## Tools provided
 
+### Evaluation
+
 | Tool | Description |
 |------|-------------|
 | `evaluate_pharo` | Evaluate any Pharo expression, returns `printString` of result |
+
+### Class browsing
+
+| Tool | Description |
+|------|-------------|
 | `list_classes` | Search classes by name pattern (max 50 results) |
-| `class_definition` | Get full class definition |
+| `class_definition` | Get full class definition including superclass and instance variables |
+| `class_hierarchy` | Show superclass chain and direct subclasses |
+| `class_comment` | Get or set the comment (documentation) on a class |
+
+### Class manipulation
+
+| Tool | Description |
+|------|-------------|
+| `class_create` | Scaffold a new class with superclass, instance variables, and package |
+| `class_remove` | Remove a class from the image (fails if subclasses exist) |
+
+### Method browsing
+
+| Tool | Description |
+|------|-------------|
+| `list_methods` | List all selectors on a class with their protocol, sorted by protocol then selector |
 | `method_source` | Get method source code (instance or class side) |
-| `list_methods` | List all selectors on a class |
+| `find_implementors` | Find all classes that implement a given selector |
+| `find_senders` | Find all methods that send a given message (capped at 100) |
+| `search_source` | Search method source code for a text pattern across a class or package |
+
+### Method manipulation
+
+| Tool | Description |
+|------|-------------|
+| `compile_method` | Compile and install a method on a class (instance or class side) |
+| `delete_method` | Remove a method from a class |
+
+### Testing & quality
+
+| Tool | Description |
+|------|-------------|
+| `run_tests` | Run a TestCase class, a single test method, or all tests in a package |
+| `run_critics` | Run Renraku code critics on a class or package |
+
+### Packages
+
+| Tool | Description |
+|------|-------------|
+| `list_packages` | List packages with class and test class counts; optional name filter |
 
 ---
 
