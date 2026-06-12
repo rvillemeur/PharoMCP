@@ -24,20 +24,23 @@ MCPLogger >> entries [
 ]
 
 { #category : 'private' }
+MCPLogger >> entryClassForMethod: method in: parsed [
+	| toolName |
+	toolName := method = 'tools/call'
+		ifTrue: [ (parsed at: 'params' ifAbsent: [ Dictionary new ]) at: 'name' ifAbsent: [ '' ] ]
+		ifFalse: [ method ].
+	^ MCPLogEntry allSubclasses
+		detect: [ :c | (c class includesSelector: #toolName) and: [ c toolName = toolName ] ]
+		ifNone: [ MCPLogEntry ]
+]
+
+{ #category : 'private' }
 MCPLogger >> entryClassForRequest: reqJson [
-	| parsed method toolName |
-	[ parsed := NeoJSONReader fromString: reqJson ]
-		on: Error do: [ :e | ^ MCPLogEntry ].
+	| parsed method |
+	parsed := self parseJson: reqJson ifInvalid: [ ^ MCPLogEntry ].
 	method := parsed at: 'method' ifAbsent: [ ^ MCPLogEntry ].
 	(method beginsWith: 'notifications/') ifTrue: [ ^ MCPNotificationLogEntry ].
-	method = 'tools/call' ifTrue: [
-		toolName := ((parsed at: 'params' ifAbsent: [ Dictionary new ]) at: 'name' ifAbsent: [ '' ]).
-		^ MCPLogEntry allSubclasses
-			detect: [ :c | (c class includesSelector: #toolName) and: [ c toolName = toolName ] ]
-			ifNone: [ MCPLogEntry ] ].
-	^ MCPLogEntry allSubclasses
-		detect: [ :c | (c class includesSelector: #toolName) and: [ c toolName = method ] ]
-		ifNone: [ MCPLogEntry ]
+	^ self entryClassForMethod: method in: parsed
 ]
 
 { #category : 'accessing' }
@@ -64,4 +67,11 @@ MCPLogger >> log: requestJson response: responseJson [
 	entry := entryClass request: requestJson response: responseJson.
 	entries add: entry.
 	^ entry
+]
+
+{ #category : 'private' }
+MCPLogger >> parseJson: aString ifInvalid: aBlock [
+	^ [ NeoJSONReader fromString: aString ]
+		on: Error
+		do: [ :e | aBlock value ]
 ]
