@@ -23,11 +23,12 @@ MCPPharoTools class >> allTools [
 	^ (OrderedCollection new
 		add: self evaluateTool; add: self listClassesTool; add: self classDefinitionTool;
 		add: self methodSourceTool; add: self compileMethodTool; add: self deleteMethodTool;
-		add: self renameMethodTool; add: self createClassTool; add: self removeClassTool;
-		add: self renameClassTool; add: self classCommentTool; add: self listMethodsTool;
-		add: self searchSourceTool; add: self runTestsTool; add: self runCriticsTool;
-		add: self findSendersTool; add: self findImplementorsTool; add: self listPackagesTool;
-		add: self createPackageTool; add: self classHierarchyTool;
+		add: self renameMethodTool; add: self moveMethodTool; add: self createClassTool;
+		add: self removeClassTool; add: self renameClassTool; add: self classCommentTool;
+		add: self listMethodsTool; add: self searchSourceTool; add: self runTestsTool;
+		add: self runCriticsTool; add: self findSendersTool; add: self findImplementorsTool;
+		add: self listPackagesTool; add: self createPackageTool; add: self removePackageTool;
+		add: self classHierarchyTool;
 		yourself) asArray
 ]
 
@@ -656,6 +657,71 @@ MCPPharoTools class >> methodSourceTool [
 					  ifAbsent: [ 'Error: missing className' ] ]
 ]
 
+{ #category : 'running' }
+MCPPharoTools class >> moveMethod: selector fromClass: sourceClassName side: side toClass: targetClassName [
+	| srcCls tgtCls srcTarget tgtTarget method protocol normalizedSource |
+	srcCls := Smalltalk globals at: sourceClassName asSymbol ifAbsent: [ ^ 'Error: source class not found: ' , sourceClassName ].
+	tgtCls := Smalltalk globals at: targetClassName asSymbol ifAbsent: [ ^ 'Error: target class not found: ' , targetClassName ].
+	srcTarget := side = 'class' ifTrue: [ srcCls class ] ifFalse: [ srcCls ].
+	tgtTarget := side = 'class' ifTrue: [ tgtCls class ] ifFalse: [ tgtCls ].
+	(srcTarget includesSelector: selector asSymbol) ifFalse: [
+		^ 'Error: method not found: ' , selector , ' in ' , sourceClassName ].
+	(tgtTarget includesSelector: selector asSymbol) ifTrue: [
+		^ 'Error: selector already defined in target: ' , selector , ' in ' , targetClassName ].
+	method := srcTarget methodDictionary at: selector asSymbol.
+	protocol := method protocol name.
+	normalizedSource := method sourceCode
+		copyReplaceAll: (String with: Character lf)
+		with: (String with: Character cr).
+	[ tgtTarget compile: normalizedSource classified: protocol asSymbol ]
+		on: Error
+		do: [ :e | ^ 'Error: compile failed on target: ' , e messageText ].
+	srcTarget removeSelector: selector asSymbol.
+	^ 'Moved: ' , sourceClassName
+		, (side = 'class' ifTrue: [ ' class' ] ifFalse: [ '' ])
+		, ' >> #' , selector , ' → ' , targetClassName
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> moveMethodTool [
+	^ MCPTool
+		name: 'method_move'
+		description: 'Move a method from one class to another, preserving source and protocol. Fails if the target class already defines the selector.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'class_name' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Source class name';
+					yourself);
+				at: 'selector' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Selector to move';
+					yourself);
+				at: 'target_class' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Destination class name';
+					yourself);
+				at: 'side' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'enum' put: #('instance' 'class');
+					at: 'description' put: 'Instance or class side. Defaults to instance.';
+					yourself);
+				yourself);
+			at: 'required' put: #('class_name' 'selector' 'target_class');
+			yourself)
+		handler: [ :args |
+			| className selector targetClass side |
+			className := args at: 'class_name' ifAbsent: [ nil ].
+			selector := args at: 'selector' ifAbsent: [ nil ].
+			targetClass := args at: 'target_class' ifAbsent: [ nil ].
+			(className isNil or: [ selector isNil or: [ targetClass isNil ] ])
+				ifTrue: [ 'Error: class_name, selector and target_class are required' ]
+				ifFalse: [
+					side := args at: 'side' ifAbsent: [ 'instance' ].
+					MCPPharoTools moveMethod: selector fromClass: className side: side toClass: targetClass ] ]
+]
+
 { #category : 'registration' }
 MCPPharoTools class >> registerToolsWith: aProcessor [
 	self allTools do: [ :tool | aProcessor registerTool: tool ]
@@ -691,6 +757,38 @@ MCPPharoTools class >> removeClassTool [
 			className := args at: 'class_name' ifAbsent: [ nil ].
 			className ifNil: [ 'Error: class_name is required' ]
 			ifNotNil: [ MCPPharoTools removeClass: className ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> removePackage: packageName [
+	| pkg |
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
+	pkg classes isEmpty ifFalse: [
+		^ 'Error: package not empty (' , pkg classes size printString , ' classes). Remove or move classes first.' ].
+	Smalltalk packageOrganizer removePackage: pkg.
+	^ 'Removed package: ' , packageName
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> removePackageTool [
+	^ MCPTool
+		name: 'package_remove'
+		description: 'Remove an empty package from the image. Fails if the package still contains classes — remove or move them first.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'package' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Package name to remove';
+					yourself);
+				yourself);
+			at: 'required' put: #('package');
+			yourself)
+		handler: [ :args |
+			| pkg |
+			pkg := args at: 'package' ifAbsent: [ nil ].
+			pkg ifNil: [ 'Error: package is required' ]
+			ifNotNil: [ MCPPharoTools removePackage: pkg ] ]
 ]
 
 { #category : 'running' }

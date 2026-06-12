@@ -419,6 +419,54 @@ MCPPharoToolsRunningTest >> testListMethodsToolHasCorrectName [
 	self assert: MCPPharoTools listMethodsTool name equals: 'list_methods'
 ]
 
+{ #category : 'tests - moveMethod' }
+MCPPharoToolsRunningTest >> testMoveMethodConflict [
+	| srcCls tgtCls result |
+	MCPPharoTools createClass: 'MCPTestMoveConflictSrc' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	MCPPharoTools createClass: 'MCPTestMoveConflictTgt' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	srcCls := Smalltalk globals at: #MCPTestMoveConflictSrc.
+	tgtCls := Smalltalk globals at: #MCPTestMoveConflictTgt.
+	[ srcCls compile: 'sharedSel ^ 1' classified: 'private'.
+	tgtCls compile: 'sharedSel ^ 2' classified: 'private'.
+	result := MCPPharoTools moveMethod: 'sharedSel' fromClass: 'MCPTestMoveConflictSrc' side: 'instance' toClass: 'MCPTestMoveConflictTgt'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'already defined') ]
+	ensure: [
+		(Smalltalk globals includesKey: #MCPTestMoveConflictSrc) ifTrue: [ (Smalltalk globals at: #MCPTestMoveConflictSrc) removeFromSystem ].
+		(Smalltalk globals includesKey: #MCPTestMoveConflictTgt) ifTrue: [ (Smalltalk globals at: #MCPTestMoveConflictTgt) removeFromSystem ] ]
+]
+
+{ #category : 'tests - moveMethod' }
+MCPPharoToolsRunningTest >> testMoveMethodSuccess [
+	| srcCls tgtCls result |
+	MCPPharoTools createClass: 'MCPTestMoveSrcIII' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	MCPPharoTools createClass: 'MCPTestMoveTgtIII' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	srcCls := Smalltalk globals at: #MCPTestMoveSrcIII.
+	tgtCls := Smalltalk globals at: #MCPTestMoveTgtIII.
+	[ srcCls compile: 'movedMethod ^ 55' classified: 'private'.
+	result := MCPPharoTools moveMethod: 'movedMethod' fromClass: 'MCPTestMoveSrcIII' side: 'instance' toClass: 'MCPTestMoveTgtIII'.
+	self assert: (result includesSubstring: 'movedMethod').
+	self deny: (srcCls includesSelector: #movedMethod).
+	self assert: (tgtCls includesSelector: #movedMethod).
+	self assert: tgtCls new movedMethod equals: 55 ]
+	ensure: [
+		(Smalltalk globals includesKey: #MCPTestMoveSrcIII) ifTrue: [ (Smalltalk globals at: #MCPTestMoveSrcIII) removeFromSystem ].
+		(Smalltalk globals includesKey: #MCPTestMoveTgtIII) ifTrue: [ (Smalltalk globals at: #MCPTestMoveTgtIII) removeFromSystem ] ]
+]
+
+{ #category : 'tests - moveMethod' }
+MCPPharoToolsRunningTest >> testMoveMethodToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'method_move' ])
+]
+
+{ #category : 'tests - moveMethod' }
+MCPPharoToolsRunningTest >> testMoveMethodUnknownSource [
+	| result |
+	result := MCPPharoTools moveMethod: 'foo' fromClass: 'NoSuchClassXYZ' side: 'instance' toClass: 'MCPTool'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+]
+
 { #category : 'tests - removeClass' }
 MCPPharoToolsRunningTest >> testRemoveClassSuccess [
 	| result className |
@@ -456,6 +504,36 @@ MCPPharoToolsRunningTest >> testRemoveClassWithSubclassesFails [
 	ensure: [
 		(Smalltalk globals includesKey: child asSymbol) ifTrue: [ (Smalltalk globals at: child asSymbol) removeFromSystem ].
 		(Smalltalk globals includesKey: parent asSymbol) ifTrue: [ (Smalltalk globals at: parent asSymbol) removeFromSystem ] ]
+]
+
+{ #category : 'tests - removePackage' }
+MCPPharoToolsRunningTest >> testRemovePackageNotEmpty [
+	| result |
+	result := MCPPharoTools removePackage: 'PharoMCP'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'not empty')
+]
+
+{ #category : 'tests - removePackage' }
+MCPPharoToolsRunningTest >> testRemovePackageSuccess [
+	| result |
+	MCPPharoTools createPackage: 'MCPTestTempPkgBBB'.
+	result := MCPPharoTools removePackage: 'MCPTestTempPkgBBB'.
+	self assert: (result beginsWith: 'Removed package:').
+	self deny: (Smalltalk packageOrganizer hasPackage: 'MCPTestTempPkgBBB')
+]
+
+{ #category : 'tests - removePackage' }
+MCPPharoToolsRunningTest >> testRemovePackageToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'package_remove' ])
+]
+
+{ #category : 'tests - removePackage' }
+MCPPharoToolsRunningTest >> testRemovePackageUnknown [
+	| result |
+	result := MCPPharoTools removePackage: 'NoSuchPkgXYZ'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchPkgXYZ')
 ]
 
 { #category : 'tests - renameClass' }
