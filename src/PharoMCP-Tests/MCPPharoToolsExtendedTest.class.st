@@ -92,6 +92,41 @@ MCPPharoToolsExtendedTest >> testCompileMethodToolUnknownClass [
 ]
 
 { #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCreateClassToolMissingArgs [
+	| r |
+	r := self call: 'class_create' args: Dictionary new.
+	self assert: (r beginsWith: 'Error')
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCreateClassToolRegistered [
+	self assert: (processor tools includesKey: 'class_create')
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCreateClassToolSuccess [
+	| r |
+	r := self call: 'class_create' args: (Dictionary new
+		at: 'class_name' put: 'TestCreateMCPXYZ';
+		at: 'package' put: 'PharoMCP-Tests';
+		yourself).
+	self assert: (r beginsWith: 'Created:').
+	self assert: (Smalltalk globals includesKey: #TestCreateMCPXYZ).
+	Smalltalk globals removeClassNamed: #TestCreateMCPXYZ
+]
+
+{ #category : 'tests' }
+MCPPharoToolsExtendedTest >> testCreateClassToolUnknownSuperclass [
+	| r |
+	r := self call: 'class_create' args: (Dictionary new
+		at: 'class_name' put: 'TestCreateMCPXYZ';
+		at: 'superclass_name' put: 'NoSuchSuperXYZ';
+		at: 'package' put: 'PharoMCP-Tests';
+		yourself).
+	self assert: (r beginsWith: 'Error')
+]
+
+{ #category : 'tests' }
 MCPPharoToolsExtendedTest >> testDeleteMethodToolRegistered [
 	self assert: (processor tools includesKey: 'delete_method')
 ]

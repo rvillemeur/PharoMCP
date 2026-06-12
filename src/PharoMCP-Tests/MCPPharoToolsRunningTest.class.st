@@ -133,6 +133,80 @@ MCPPharoToolsRunningTest >> testCompileMethodUnknownClass [
 	self assert: (result includesSubstring: 'NoSuchClassXYZ')
 ]
 
+{ #category : 'tests - createClass' }
+MCPPharoToolsRunningTest >> testCreateClassAlreadyExists [
+	| result |
+	result := MCPPharoTools
+		createClass: 'Object'
+		superclass: 'Object'
+		instanceVariables: #()
+		package: 'PharoMCP-Tests'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'already exists')
+]
+
+{ #category : 'tests - createClass' }
+MCPPharoToolsRunningTest >> testCreateClassNoInstVars [
+	| result |
+	result := MCPPharoTools createClass: 'TestCreateMCPXYZ' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	self assert: (result beginsWith: 'Created:').
+	self assert: TestCreateMCPXYZ instVarNames isEmpty.
+	Smalltalk globals removeClassNamed: #TestCreateMCPXYZ
+]
+
+{ #category : 'tests - createClass' }
+MCPPharoToolsRunningTest >> testCreateClassNoInstanceVariables [
+	| result className |
+	className := 'MCPTestTempClassCCC'.
+	[ result := MCPPharoTools
+		createClass: className
+		superclass: 'Object'
+		instanceVariables: #()
+		package: 'PharoMCP-Tests'.
+	self assert: (result beginsWith: 'Created:').
+	self assert: (result includesSubstring: '0 instance variables') ]
+	ensure: [ (Smalltalk globals includesKey: className asSymbol) ifTrue: [
+		(Smalltalk globals at: className asSymbol) removeFromSystem ] ]
+]
+
+{ #category : 'tests - createClass' }
+MCPPharoToolsRunningTest >> testCreateClassSuccess [
+	| result className |
+	className := 'MCPTestTempClassAAA'.
+	[ result := MCPPharoTools
+		createClass: className
+		superclass: 'Object'
+		instanceVariables: #('foo' 'bar')
+		package: 'PharoMCP-Tests'.
+	self assert: (result beginsWith: 'Created:').
+	self assert: (result includesSubstring: className).
+	self assert: (result includesSubstring: '2 instance variables') ]
+	ensure: [ (Smalltalk globals includesKey: className asSymbol) ifTrue: [
+		(Smalltalk globals at: className asSymbol) removeFromSystem ] ]
+]
+
+{ #category : 'tests - createClass' }
+MCPPharoToolsRunningTest >> testCreateClassToolHasCorrectName [
+	self assert: MCPPharoTools createClassTool name equals: 'class_create'
+]
+
+{ #category : 'tests - createClass' }
+MCPPharoToolsRunningTest >> testCreateClassToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'class_create' ])
+]
+
+{ #category : 'tests - createClass' }
+MCPPharoToolsRunningTest >> testCreateClassUnknownSuperclass [
+	| result |
+	result := MCPPharoTools
+		createClass: 'MCPTestTempClassBBB'
+		superclass: 'NoSuchSuperclassXYZ'
+		instanceVariables: #()
+		package: 'PharoMCP-Tests'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchSuperclassXYZ')
+]
+
 { #category : 'tests - deleteMethod' }
 MCPPharoToolsRunningTest >> testDeleteMethodClassSide [
 	| result |
@@ -249,6 +323,46 @@ MCPPharoToolsRunningTest >> testFormatResultWithSelector [
 	self assert: (r includesSubstring: 'myTest')
 ]
 
+{ #category : 'tests - listMethods' }
+MCPPharoToolsRunningTest >> testListMethodsClassSideIncludesProtocol [
+	| tool result |
+	tool := MCPPharoTools listMethodsTool.
+	result := tool handler value: (Dictionary new
+		at: 'className' put: 'MCPPharoTools';
+		at: 'side' put: 'class';
+		yourself).
+	self assert: (result includesSubstring: ' | ').
+	self deny: (result beginsWith: 'Error')
+]
+
+{ #category : 'tests - listMethods' }
+MCPPharoToolsRunningTest >> testListMethodsIncludesProtocol [
+	| tool result |
+	tool := MCPPharoTools listMethodsTool.
+	result := tool handler value: (Dictionary new at: 'className' put: 'MCPTool'; yourself).
+	self assert: (result includesSubstring: ' | ').
+	self assert: (result includesSubstring: 'accessing')
+]
+
+{ #category : 'tests - listMethods' }
+MCPPharoToolsRunningTest >> testListMethodsSortedByProtocolThenSelector [
+	| tool result lines descIdx nameIdx |
+	tool := MCPPharoTools listMethodsTool.
+	result := tool handler value: (Dictionary new at: 'className' put: 'MCPTool'; yourself).
+	lines := result lines reject: [ :l | l isEmpty ].
+	self assert: lines size > 1.
+	descIdx := lines indexOf: 'accessing | description'.
+	nameIdx := lines indexOf: 'accessing | name'.
+	self assert: descIdx > 0.
+	self assert: nameIdx > 0.
+	self assert: descIdx < nameIdx
+]
+
+{ #category : 'tests - listMethods' }
+MCPPharoToolsRunningTest >> testListMethodsToolHasCorrectName [
+	self assert: MCPPharoTools listMethodsTool name equals: 'list_methods'
+]
+
 { #category : 'tests - runCritics' }
 MCPPharoToolsRunningTest >> testRunCriticsOnClassUnknown [
 	| r |
@@ -281,6 +395,13 @@ MCPPharoToolsRunningTest >> testRunTestsForClassAllTests [
 ]
 
 { #category : 'tests - runTests' }
+MCPPharoToolsRunningTest >> testRunTestsForClassIncludesDuration [
+	| r |
+	r := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: nil.
+	self assert: (r includesSubstring: 'ms')
+]
+
+{ #category : 'tests - runTests' }
 MCPPharoToolsRunningTest >> testRunTestsForClassNonTestCase [
 	| r |
 	r := MCPPharoTools runTestsForClass: 'OrderedCollection' selector: nil.
@@ -303,6 +424,13 @@ MCPPharoToolsRunningTest >> testRunTestsForClassUnknownClass [
 	r := MCPPharoTools runTestsForClass: 'NoSuchClassXYZ' selector: nil.
 	self assert: (r beginsWith: 'Error').
 	self assert: (r includesSubstring: 'NoSuchClassXYZ')
+]
+
+{ #category : 'tests - runTests' }
+MCPPharoToolsRunningTest >> testRunTestsInPackageIncludesDuration [
+	| r |
+	r := MCPPharoTools runTestsInPackage: 'SUnit-MockObjects-Tests'.
+	self assert: (r includesSubstring: 'ms')
 ]
 
 { #category : 'tests - runTests' }

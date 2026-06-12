@@ -159,20 +159,20 @@ MCPPharoTools class >> compileMethodTool [
 ]
 
 { #category : 'running' }
-MCPPharoTools class >> createClass: className superclass: superclassName instanceVariables: instVarNames package: packageName [
-	| superclass slots |
+MCPPharoTools class >> createClass: className superclass: superclsName instanceVariables: instVarNames package: packageName [
+	| supercls slots |
 	(Smalltalk globals includesKey: className asSymbol) ifTrue: [
 		^ 'Error: class already exists: ' , className ].
-	superclass := Smalltalk globals at: superclassName asSymbol
-		ifAbsent: [ ^ 'Error: superclass not found: ' , superclassName ].
+	supercls := Smalltalk globals at: superclsName asSymbol
+		ifAbsent: [ ^ 'Error: superclass not found: ' , superclsName ].
 	slots := (instVarNames ifNil: [ #() ]) collect: [ :n | n asSymbol ].
-	[ (superclass << className asSymbol
+	[ (supercls << className asSymbol
 		slots: slots;
 		package: packageName) install ]
 		on: Error
 		do: [ :e | ^ 'Error: class creation failed: ' , e messageText ].
 	^ 'Created: ' , className
-		, ' (subclass of ' , superclassName
+		, ' (subclass of ' , superclsName
 		, ', ' , slots size printString , ' instance variable'
 		, (slots size = 1 ifTrue: [ '' ] ifFalse: [ 's' ])
 		, ')'
@@ -190,7 +190,7 @@ MCPPharoTools class >> createClassTool [
 					at: 'type' put: 'string';
 					at: 'description' put: 'Name of the new class';
 					yourself);
-				at: 'superclass' put: (Dictionary new
+				at: 'superclass_name' put: (Dictionary new
 					at: 'type' put: 'string';
 					at: 'description' put: 'Superclass name. Defaults to Object.';
 					yourself);
@@ -207,15 +207,15 @@ MCPPharoTools class >> createClassTool [
 			at: 'required' put: #('class_name' 'package');
 			yourself)
 		handler: [ :args |
-			| className superclass instVars package |
+			| className superclsName instVars package |
 			className := args at: 'class_name' ifAbsent: [ nil ].
 			package := args at: 'package' ifAbsent: [ nil ].
 			(className isNil or: [ package isNil ])
 				ifTrue: [ 'Error: class_name and package are required' ]
 				ifFalse: [
-					superclass := args at: 'superclass' ifAbsent: [ 'Object' ].
+					superclsName := args at: 'superclass_name' ifAbsent: [ 'Object' ].
 					instVars := args at: 'instance_variables' ifAbsent: [ #() ].
-					self createClass: className superclass: superclass instanceVariables: instVars package: package ] ]
+					self createClass: className superclass: superclsName instanceVariables: instVars package: package ] ]
 ]
 
 { #category : 'running' }
@@ -693,21 +693,15 @@ MCPPharoTools class >> searchSource: pattern inMethods: methods caseSensitive: c
 	| norm results limited |
 	norm := caseSensitive ifTrue: [ pattern ] ifFalse: [ pattern asLowercase ].
 	results := methods select: [ :m |
-		| src |
-		src := caseSensitive ifTrue: [ m sourceCode ] ifFalse: [ m sourceCode asLowercase ].
-		src includesSubstring: norm ].
+		(caseSensitive ifTrue: [ m sourceCode ] ifFalse: [ m sourceCode asLowercase ])
+			includesSubstring: norm ].
 	results isEmpty ifTrue: [ ^ 'No methods found containing: ' , pattern ].
 	limited := results size > 100 ifTrue: [ results first: 100 ] ifFalse: [ results ].
 	^ String streamContents: [ :s |
 		results size > 100 ifTrue: [
 			s << 'Showing first 100 of '; print: results size; << ' matches';
 			nextPut: Character lf; nextPut: Character lf ].
-		limited do: [ :m |
-			| lines matchLine |
-			s << m methodClass name; << ' >> #'; << m selector; nextPut: Character lf.
-			lines := m sourceCode lines.
-			matchLine := lines detect: [ :l | l asLowercase includesSubstring: norm ] ifNone: [ nil ].
-			matchLine ifNotNil: [ s << '  '; << matchLine trimmed; nextPut: Character lf ] ] ]
+		limited do: [ :m | self writeMatchEntry: m norm: norm to: s ] ]
 ]
 
 { #category : 'running' }
@@ -766,4 +760,14 @@ MCPPharoTools class >> searchSourceTool [
 						className
 							ifNotNil: [ self searchSourceFor: pattern inClass: className caseSensitive: cs ]
 							ifNil: [ 'Error: provide class_name or package' ] ] ] ]
+]
+
+{ #category : 'private' }
+MCPPharoTools class >> writeMatchEntry: m norm: norm to: s [
+	| matchLine |
+	s << m methodClass name; << ' >> #'; << m selector; nextPut: Character lf.
+	matchLine := m sourceCode lines
+		detect: [ :l | l asLowercase includesSubstring: norm ]
+		ifNone: [ nil ].
+	matchLine ifNotNil: [ s << '  '; << matchLine trimmed; nextPut: Character lf ]
 ]
