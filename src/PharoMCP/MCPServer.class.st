@@ -64,37 +64,7 @@ MCPServer >> announcer [
 ]
 
 { #category : 'private' }
-MCPServer >> handleRequest: request [
-	"Functional delegate protocol — ZnServer uses the returned ZnResponse"
-	| body result |
-	request method = 'OPTIONS' ifTrue: [
-		^ self addCorsHeadersTo: (ZnResponse new
-			statusLine: ZnStatusLine ok;
-			yourself) ].
-	request method ~= 'POST' ifTrue: [
-		^ self addCorsHeadersTo: (ZnResponse new
-			statusLine: ZnStatusLine methodNotAllowed;
-			entity: (ZnEntity text: 'Method Not Allowed');
-			yourself) ].
-	body := (request hasEntity and: [ request entity notNil ])
-		ifTrue: [ request entity string ]
-		ifFalse: [ '{}' ].
-	result := [ processor processRawRequest: body ]
-		on: Error
-		do: [ :e |
-			NeoJSONWriter toString: (Dictionary new
-				at: 'jsonrpc' put: '2.0';
-				at: 'id' put: nil;
-				at: 'error' put: (Dictionary new
-					at: 'code' put: -32603;
-					at: 'message' put: 'Internal error: ' , e messageText;
-					yourself);
-				yourself) ].
-	[ | entry |
-	  entry := logger log: body response: result.
-	  entry ifNotNil: [
-		announcer announce: (MCPRequestLogged new entry: entry; yourself) ] ]
-		on: Error do: [ :e | "absorb logging errors" ].
+MCPServer >> buildResponseFor: result [
 	^ self addCorsHeadersTo: (result
 		ifNil: [
 			ZnResponse new
@@ -104,6 +74,40 @@ MCPServer >> handleRequest: request [
 			ZnResponse ok: (ZnEntity
 				with: result
 				type: ZnMimeType applicationJson) ])
+]
+
+{ #category : 'private' }
+MCPServer >> extractBodyFrom: request [
+	^ (request hasEntity and: [ request entity notNil ])
+		ifTrue: [ request entity string ]
+		ifFalse: [ '{}' ]
+]
+
+{ #category : 'private' }
+MCPServer >> handleNonPostRequest [
+	^ self addCorsHeadersTo: (ZnResponse new
+		statusLine: ZnStatusLine methodNotAllowed;
+		entity: (ZnEntity text: 'Method Not Allowed');
+		yourself)
+]
+
+{ #category : 'private' }
+MCPServer >> handleOptionsRequest [
+	^ self addCorsHeadersTo: (ZnResponse new
+		statusLine: ZnStatusLine ok;
+		yourself)
+]
+
+{ #category : 'private' }
+MCPServer >> handleRequest: request [
+	"Functional delegate protocol — ZnServer uses the returned ZnResponse"
+	| body result |
+	request method = 'OPTIONS' ifTrue: [ ^ self handleOptionsRequest ].
+	request method ~= 'POST' ifTrue: [ ^ self handleNonPostRequest ].
+	body := self extractBodyFrom: request.
+	result := self safeProcess: body.
+	self logRequest: body response: result.
+	^ self buildResponseFor: result
 ]
 
 { #category : 'private' }
@@ -140,6 +144,15 @@ MCPServer >> isRunning [
 	^ httpServer notNil and: [ httpServer isRunning ]
 ]
 
+{ #category : 'private' }
+MCPServer >> logRequest: body response: result [
+	[ | entry |
+	  entry := logger log: body response: result.
+	  entry ifNotNil: [
+		announcer announce: (MCPRequestLogged new entry: entry; yourself) ] ]
+		on: Error do: [ :e | "absorb logging errors" ]
+]
+
 { #category : 'accessing' }
 MCPServer >> logger [
 	^ logger
@@ -165,13 +178,28 @@ MCPServer >> registerTool: aTool [
 	processor registerTool: aTool
 ]
 
+{ #category : 'private' }
+MCPServer >> safeProcess: body [
+	^ [ processor processRawRequest: body ]
+		on: Error
+		do: [ :e |
+			NeoJSONWriter toString: (Dictionary new
+				at: 'jsonrpc' put: '2.0';
+				at: 'id' put: nil;
+				at: 'error' put: (Dictionary new
+					at: 'code' put: -32603;
+					at: 'message' put: 'Internal error: ' , e messageText;
+					yourself);
+				yourself) ]
+]
+
 { #category : 'control' }
 MCPServer >> start [
 	self isRunning ifTrue: [ ^ self ].
 	httpServer := ZnServer on: port.
 	httpServer delegate: self.
 	httpServer start.
-	Transcript show: 'PharoMCP running on http://localhost:' << port printString; cr.
+	Transcript show: 'PharoMCP running on http://localhost:',  port printString; cr.
 	announcer announce: MCPServerStarted new
 ]
 
