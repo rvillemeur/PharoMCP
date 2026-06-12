@@ -150,7 +150,7 @@ MCPServer >> logRequest: body response: result [
 	  entry := logger log: body response: result.
 	  entry ifNotNil: [
 		announcer announce: (MCPRequestLogged new entry: entry; yourself) ] ]
-		on: Error do: [ :e | "absorb logging errors" ]
+		on: Error do: [ :e | Transcript show: 'MCPServer log error: ' << e messageText; cr ]
 ]
 
 { #category : 'accessing' }

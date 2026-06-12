@@ -180,11 +180,13 @@ MCPLogEntrySubclassTest >> testRunTestsLogEntryWithSelector [
 
 { #category : 'tests - requestArgument' }
 MCPLogEntrySubclassTest >> testToolsListLogEntryRequestArgument [
+
 	| entry |
 	entry := MCPToolsListLogEntry new
-		initializeFromRequest: '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
-		response: ''.
-	self assert: entry requestArgument equals: '' 
+		         initializeFromRequest:
+		         '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+		         response: ''.
+	self assert: entry requestArgument equals: ''
 ]
 
 { #category : 'tests - toolNames' }

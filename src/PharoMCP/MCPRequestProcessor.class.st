@@ -126,7 +126,7 @@ MCPRequestProcessor >> processRawRequest: jsonString [
 				errorResponseWithId: nil
 				code: -32700
 				message: 'Parse error' ].
-	(request isKindOf: Dictionary) ifFalse: [
+	(request isDictionary) ifFalse: [
 		^ self errorResponseWithId: nil code: -32600 message: 'Invalid Request' ].
 	^ self dispatchRequest: request
 ]

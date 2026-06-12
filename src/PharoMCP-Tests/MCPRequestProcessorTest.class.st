@@ -104,11 +104,12 @@ MCPRequestProcessorTest >> testParseErrorReturns32700 [
 
 { #category : 'tests' }
 MCPRequestProcessorTest >> testResponseIsValidJson [
+
 	| response |
 	response := processor processRawRequest:
-		(self request: 'tools/list' id: 1 params: Dictionary new).
+		            (self request: 'tools/list' id: 1 params: Dictionary new).
 	self assert: response isString.
-	self shouldnt: [ NeoJSONReader fromString: response ] raise: Error
+	NeoJSONReader fromString: response
 ]
 
 { #category : 'tests' }

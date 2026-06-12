@@ -66,12 +66,12 @@ MCPLogEntry >> displayMethod [
 MCPLogEntry >> extractedResponseText [
 	| parsed result content |
 	responseJson isEmpty ifTrue: [ ^ nil ].
-	[ parsed := NeoJSONReader fromString: responseJson ]
+	parsed := [ NeoJSONReader fromString: responseJson ]
 		on: Error do: [ :e | ^ nil ].
 	result := parsed at: 'result' ifAbsent: [ ^ nil ].
-	(result isKindOf: Dictionary) ifFalse: [ ^ nil ].
+	result isDictionary ifFalse: [ ^ nil ].
 	content := result at: 'content' ifAbsent: [ ^ nil ].
-	(content isKindOf: Array) ifFalse: [ ^ nil ].
+	content isArray ifFalse: [ ^ nil ].
 	content isEmpty ifTrue: [ ^ nil ].
 	^ content first at: 'text' ifAbsent: [ nil ]
 ]
@@ -107,7 +107,7 @@ MCPLogEntry >> method [
 { #category : 'private' }
 MCPLogEntry >> parseRequest: reqJson [
 	| parsed params |
-	[ parsed := NeoJSONReader fromString: reqJson ]
+	parsed := [ NeoJSONReader fromString: reqJson ]
 		on: Error
 		do: [ :e | method := '(parse error)'. ^ self ].
 	method := parsed at: 'method' ifAbsent: [ '?' ].
@@ -134,7 +134,7 @@ MCPLogEntry >> parsedArguments [
 	"Returns arguments dict from a tools/call request, or empty dict on any error"
 	| parsed params |
 	method = 'tools/call' ifFalse: [ ^ Dictionary new ].
-	[ parsed := NeoJSONReader fromString: requestJson ]
+	parsed := [ NeoJSONReader fromString: requestJson ]
 		on: Error do: [ :e | ^ Dictionary new ].
 	params := parsed at: 'params' ifAbsent: [ ^ Dictionary new ].
 	^ params at: 'arguments' ifAbsent: [ Dictionary new ]

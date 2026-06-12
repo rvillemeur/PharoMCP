@@ -203,10 +203,12 @@ MCPPharoTools class >> formatCritiques: critiques forName: targetName [
 			s << 'Showing first 200 of '; print: critiques size; << ' critiques';
 			nextPut: Character lf; nextPut: Character lf ].
 		limited do: [ :c |
-			[ s << '['; << c rule class name; << '] '; << c title.
+			s << '['; << c rule class name; << '] '; << c title.
 			c sourceAnchor ifNotNil: [ :a |
-				[ s << ' ('; << a entity printString; << ')' ] on: Error do: [ :e | ] ].
-			s nextPut: Character lf ] on: Error do: [ :e | ] ] ]
+				| entity |
+				entity := [ a entity ] on: Error do: [ :e | nil ].
+				entity ifNotNil: [ s << ' ('; << entity printString; << ')' ] ].
+			s nextPut: Character lf ] ]
 ]
 
 { #category : 'private' }

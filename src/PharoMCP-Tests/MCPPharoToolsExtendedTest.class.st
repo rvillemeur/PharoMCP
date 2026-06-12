@@ -69,8 +69,13 @@ MCPPharoToolsExtendedTest >> testFindImplementorsOnUnknownSelector [
 
 { #category : 'tests - find_implementors' }
 MCPPharoToolsExtendedTest >> testFindImplementorsReturnsResults [
-	| r | r := self call: 'find_implementors' args: (Dictionary new at: 'selector' put: 'printOn:'; yourself).
-	self deny: (r beginsWith: 'Error'). self assert: r size > 0
+
+	| r |
+	r := self call: 'find_implementors' args: (Dictionary new
+			      at: 'selector' put: 'printOn:';
+			      yourself).
+	self deny: (r beginsWith: 'Error').
+	self assert: r isNotEmpty
 ]
 
 { #category : 'tests - find_implementors' }

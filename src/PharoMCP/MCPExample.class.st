@@ -83,14 +83,10 @@ MCPExample class >> startOnPort: aPort [
 	^ server
 ]
 
-{ #category : 'start-stop' }
+{ #category : 'examples' }
 MCPExample class >> stop [
-
 	<sampleInstance>
-	(Smalltalk at: #PharoMCPServer ifAbsent: [ nil ]) ifNotNil: [ :s |
-			[ s stop ]
-				on: Error
-				do: [ ] ].
+	(Smalltalk at: #PharoMCPServer ifAbsent: [ nil ]) ifNotNil: [ :s | s stop ].
 	Smalltalk globals removeKey: #PharoMCPServer ifAbsent: [ ]
 ]
 

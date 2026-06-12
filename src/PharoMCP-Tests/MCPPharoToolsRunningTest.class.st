@@ -89,10 +89,11 @@ MCPPharoToolsRunningTest >> testFindSendersOfUnknownSelector [
 
 { #category : 'tests - findSenders' }
 MCPPharoToolsRunningTest >> testFindSendersOfValidSelector [
+
 	| r |
 	r := MCPPharoTools findSendersOf: 'printOn:'.
 	self deny: (r beginsWith: 'Error').
-	self assert: r size > 0
+	self assert: r isNotEmpty
 ]
 
 { #category : 'tests - formatCritiques' }
