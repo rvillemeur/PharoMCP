@@ -23,10 +23,11 @@ MCPPharoTools class >> allTools [
 	^ (OrderedCollection new
 		add: self evaluateTool; add: self listClassesTool; add: self classDefinitionTool;
 		add: self methodSourceTool; add: self compileMethodTool; add: self deleteMethodTool;
-		add: self createClassTool; add: self removeClassTool; add: self classCommentTool;
-		add: self listMethodsTool; add: self searchSourceTool;
+		add: self renameMethodTool; add: self createClassTool; add: self removeClassTool;
+		add: self classCommentTool; add: self listMethodsTool; add: self searchSourceTool;
 		add: self runTestsTool; add: self runCriticsTool; add: self findSendersTool;
-		add: self findImplementorsTool; add: self listPackagesTool; add: self classHierarchyTool;
+		add: self findImplementorsTool; add: self listPackagesTool; add: self createPackageTool;
+		add: self classHierarchyTool;
 		yourself) asArray
 ]
 
@@ -246,6 +247,36 @@ MCPPharoTools class >> createClassTool [
 					superclsName := args at: 'superclass_name' ifAbsent: [ 'Object' ].
 					instVars := args at: 'instance_variables' ifAbsent: [ #() ].
 					self createClass: className superclass: superclsName instanceVariables: instVars package: package ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> createPackage: packageName [
+	(Smalltalk packageOrganizer hasPackage: packageName) ifTrue: [
+		^ 'Error: package already exists: ' , packageName ].
+	Smalltalk packageOrganizer ensurePackage: packageName.
+	^ 'Created package: ' , packageName
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> createPackageTool [
+	^ MCPTool
+		name: 'package_create'
+		description: 'Create a new package in the image. Fails if a package with that name already exists.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'package' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Package name, e.g. MyApp or MyApp-Core';
+					yourself);
+				yourself);
+			at: 'required' put: #('package');
+			yourself)
+		handler: [ :args |
+			| pkg |
+			pkg := args at: 'package' ifAbsent: [ nil ].
+			pkg ifNil: [ 'Error: package is required' ]
+			ifNotNil: [ MCPPharoTools createPackage: pkg ] ]
 ]
 
 { #category : 'running' }
@@ -660,6 +691,71 @@ MCPPharoTools class >> removeClassTool [
 			className := args at: 'class_name' ifAbsent: [ nil ].
 			className ifNil: [ 'Error: class_name is required' ]
 			ifNotNil: [ MCPPharoTools removeClass: className ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> renameMethod: oldSelector onClass: className side: side to: newSelector [
+	| cls target permutation oldMethod protocol newSource |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	target := side = 'class' ifTrue: [ cls class ] ifFalse: [ cls ].
+	(target includesSelector: oldSelector asSymbol) ifFalse: [
+		^ 'Error: method not found: ' , oldSelector , ' in ' , className ].
+	(target includesSelector: newSelector asSymbol) ifTrue: [
+		^ 'Error: selector already exists: ' , newSelector , ' in ' , className ].
+	oldMethod := target methodDictionary at: oldSelector asSymbol.
+	protocol := oldMethod protocol name.
+	newSource := oldMethod sourceCode
+		copyReplaceAll: oldSelector
+		with: newSelector.
+	permutation := (1 to: oldSelector asSymbol numArgs) asArray.
+	[ target compile: newSource classified: protocol asSymbol ]
+		on: Error
+		do: [ :e | ^ 'Error: recompile failed: ' , e messageText ].
+	target removeSelector: oldSelector asSymbol.
+	^ 'Renamed: ' , className
+		, (side = 'class' ifTrue: [ ' class' ] ifFalse: [ '' ])
+		, ' >> #' , oldSelector , ' to #' , newSelector
+		, '. Use find_senders to update callers.'
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> renameMethodTool [
+	^ MCPTool
+		name: 'method_rename'
+		description: 'Rename a method selector on a class. Rewrites the method source and removes the old selector. Does NOT auto-update senders — use find_senders after renaming to locate callers that need updating.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'class_name' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Name of the class that defines the method';
+					yourself);
+				at: 'old_selector' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Current selector to rename';
+					yourself);
+				at: 'new_selector' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'New selector. Must have the same number of arguments.';
+					yourself);
+				at: 'side' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'enum' put: #('instance' 'class');
+					at: 'description' put: 'Instance or class side. Defaults to instance.';
+					yourself);
+				yourself);
+			at: 'required' put: #('class_name' 'old_selector' 'new_selector');
+			yourself)
+		handler: [ :args |
+			| className oldSel newSel side |
+			className := args at: 'class_name' ifAbsent: [ nil ].
+			oldSel := args at: 'old_selector' ifAbsent: [ nil ].
+			newSel := args at: 'new_selector' ifAbsent: [ nil ].
+			(className isNil or: [ oldSel isNil or: [ newSel isNil ] ])
+				ifTrue: [ 'Error: class_name, old_selector and new_selector are required' ]
+				ifFalse: [
+					side := args at: 'side' ifAbsent: [ 'instance' ].
+					MCPPharoTools renameMethod: oldSel onClass: className side: side to: newSel ] ]
 ]
 
 { #category : 'running' }

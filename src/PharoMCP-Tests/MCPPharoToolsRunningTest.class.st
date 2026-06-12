@@ -5,6 +5,10 @@ Class {
 	#package : 'PharoMCP-Tests'
 }
 
+{ #category : 'private' }
+MCPPharoToolsRunningTest >> tempNewName [ ^ 77
+]
+
 { #category : 'tests - classComment' }
 MCPPharoToolsRunningTest >> testClassCommentToolHasCorrectName [
 	self assert: MCPPharoTools classCommentTool name equals: 'class_comment'
@@ -210,6 +214,31 @@ MCPPharoToolsRunningTest >> testCreateClassUnknownSuperclass [
 		package: 'PharoMCP-Tests'.
 	self assert: (result beginsWith: 'Error').
 	self assert: (result includesSubstring: 'NoSuchSuperclassXYZ')
+]
+
+{ #category : 'tests - createPackage' }
+MCPPharoToolsRunningTest >> testCreatePackageAlreadyExists [
+	| result |
+	result := MCPPharoTools createPackage: 'PharoMCP'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'already exists')
+]
+
+{ #category : 'tests - createPackage' }
+MCPPharoToolsRunningTest >> testCreatePackageSuccess [
+	| result |
+	[ result := MCPPharoTools createPackage: 'MCPTestTempPkgAAA'.
+	self assert: (result beginsWith: 'Created package:').
+	self assert: (Smalltalk packageOrganizer hasPackage: 'MCPTestTempPkgAAA') ]
+	ensure: [
+		(Smalltalk packageOrganizer hasPackage: 'MCPTestTempPkgAAA') ifTrue: [
+			Smalltalk packageOrganizer removePackage:
+				(Smalltalk packageOrganizer packageNamed: 'MCPTestTempPkgAAA') ] ]
+]
+
+{ #category : 'tests - createPackage' }
+MCPPharoToolsRunningTest >> testCreatePackageToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'package_create' ])
 ]
 
 { #category : 'tests - deleteMethod' }
@@ -427,6 +456,43 @@ MCPPharoToolsRunningTest >> testRemoveClassWithSubclassesFails [
 	ensure: [
 		(Smalltalk globals includesKey: child asSymbol) ifTrue: [ (Smalltalk globals at: child asSymbol) removeFromSystem ].
 		(Smalltalk globals includesKey: parent asSymbol) ifTrue: [ (Smalltalk globals at: parent asSymbol) removeFromSystem ] ]
+]
+
+{ #category : 'tests - renameMethod' }
+MCPPharoToolsRunningTest >> testRenameMethodSuccess [
+	| cls result |
+	MCPPharoTools createClass: 'MCPTestRenameSubjectFFF' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	cls := Smalltalk globals at: #MCPTestRenameSubjectFFF.
+	[ cls compile: 'oldSel ^ 99' classified: 'private'.
+	result := MCPPharoTools renameMethod: 'oldSel' onClass: 'MCPTestRenameSubjectFFF' side: 'instance' to: 'newSel'.
+	self assert: (result includesSubstring: 'oldSel').
+	self assert: (result includesSubstring: 'newSel').
+	self deny: (cls includesSelector: #oldSel).
+	self assert: (cls includesSelector: #newSel).
+	self assert: cls new newSel equals: 99 ]
+	ensure: [ (Smalltalk globals includesKey: #MCPTestRenameSubjectFFF) ifTrue: [
+		(Smalltalk globals at: #MCPTestRenameSubjectFFF) removeFromSystem ] ]
+]
+
+{ #category : 'tests - renameMethod' }
+MCPPharoToolsRunningTest >> testRenameMethodToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'method_rename' ])
+]
+
+{ #category : 'tests - renameMethod' }
+MCPPharoToolsRunningTest >> testRenameMethodUnknownClass [
+	| result |
+	result := MCPPharoTools renameMethod: 'foo' onClass: 'NoSuchClassXYZ' side: 'instance' to: 'bar'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+]
+
+{ #category : 'tests - renameMethod' }
+MCPPharoToolsRunningTest >> testRenameMethodUnknownSelector [
+	| result |
+	result := MCPPharoTools renameMethod: 'noSuchSelectorXYZ' onClass: 'MCPPharoToolsRunningTest' side: 'instance' to: 'bar'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'noSuchSelectorXYZ')
 ]
 
 { #category : 'tests - runCritics' }
