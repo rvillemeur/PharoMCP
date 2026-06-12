@@ -32,21 +32,15 @@ Workspace source: `src/` (Tonel format). Keep in sync with image after changes.
 - CR line endings in compiled methods (`\r` not `\n`) — post-hook normalises automatically
 - No empty `on:do:` handlers — `ReEmptyExceptionHandlerRule` enforces this
 
-## Pending work (priority order)
+## Pending work
 
-1. ~~**`search_source` tool**~~ — done.
+No open items. All original tasks complete. Tools added beyond original scope:
 
-2. ~~**`delete_method` tool**~~ — done.
+- `class_comment`, `class_remove`, `class_rename` — class lifecycle
+- `method_rename`, `method_move` — method refactoring
+- `package_create`, `package_remove` — package lifecycle
 
-3. ~~**Extended test for `compile_method`**~~ — done (also covers `delete_method` and `search_source`). — `MCPPharoToolsExtendedTest` covers all other tools via processor interface; `compile_method` missing.
-
-4. ~~**`class_create` tool**~~ — done (6 tests added).
-
-6. ~~**`list_methods` protocol info**~~ — done (already in image, 4 tests added).
-
-7. ~~**`run_tests` duration**~~ — done (already in image, 2 tests added).
-
-8. ~~**Check `MCPExample.class.st`**~~ — done, image and file match.
+Current tool count: 22. Test suite: 244 tests, all pass.
 
 ## Running
 

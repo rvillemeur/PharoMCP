@@ -47,6 +47,7 @@ MCP (Model Context Protocol) server for Pharo Smalltalk. Runs locally over HTTP,
 | `compile_method` | Compile and install a method on a class (instance or class side) |
 | `delete_method` | Remove a method from a class |
 | `method_rename` | Rename a method selector on a class. Does not auto-update senders — use `find_senders` after renaming to locate callers. |
+| `method_move` | Move a method from one class to another, preserving source and protocol. Fails if target already defines the selector. |
 
 ### Testing & quality
 
@@ -61,6 +62,7 @@ MCP (Model Context Protocol) server for Pharo Smalltalk. Runs locally over HTTP,
 |------|-------------|
 | `list_packages` | List packages with class and test class counts; optional name filter |
 | `package_create` | Create a new package in the image (fails if already exists) |
+| `package_remove` | Remove an empty package. Fails if the package still contains classes. |
 
 ---
 
