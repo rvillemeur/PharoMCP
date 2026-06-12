@@ -24,10 +24,10 @@ MCPPharoTools class >> allTools [
 		add: self evaluateTool; add: self listClassesTool; add: self classDefinitionTool;
 		add: self methodSourceTool; add: self compileMethodTool; add: self deleteMethodTool;
 		add: self renameMethodTool; add: self createClassTool; add: self removeClassTool;
-		add: self classCommentTool; add: self listMethodsTool; add: self searchSourceTool;
-		add: self runTestsTool; add: self runCriticsTool; add: self findSendersTool;
-		add: self findImplementorsTool; add: self listPackagesTool; add: self createPackageTool;
-		add: self classHierarchyTool;
+		add: self renameClassTool; add: self classCommentTool; add: self listMethodsTool;
+		add: self searchSourceTool; add: self runTestsTool; add: self runCriticsTool;
+		add: self findSendersTool; add: self findImplementorsTool; add: self listPackagesTool;
+		add: self createPackageTool; add: self classHierarchyTool;
 		yourself) asArray
 ]
 
@@ -691,6 +691,47 @@ MCPPharoTools class >> removeClassTool [
 			className := args at: 'class_name' ifAbsent: [ nil ].
 			className ifNil: [ 'Error: class_name is required' ]
 			ifNotNil: [ MCPPharoTools removeClass: className ] ]
+]
+
+{ #category : 'running' }
+MCPPharoTools class >> renameClass: oldName to: newName [
+	(Smalltalk globals includesKey: oldName asSymbol) ifFalse: [
+		^ 'Error: class not found: ' , oldName ].
+	(Smalltalk globals includesKey: newName asSymbol) ifTrue: [
+		^ 'Error: class already exists: ' , newName ].
+	[ (RBRenameClassChange rename: oldName to: newName) execute ]
+		on: Error
+		do: [ :e | ^ 'Error: rename failed: ' , e messageText ].
+	^ 'Renamed: ' , oldName , ' to ' , newName
+		, '. Use search_source to find references that need updating.'
+]
+
+{ #category : 'tools' }
+MCPPharoTools class >> renameClassTool [
+	^ MCPTool
+		name: 'class_rename'
+		description: 'Rename a class in the image. Does not auto-update references in method source — use search_source after renaming to find callers that need updating.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'old_name' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Current class name';
+					yourself);
+				at: 'new_name' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'New class name. Must not already exist.';
+					yourself);
+				yourself);
+			at: 'required' put: #('old_name' 'new_name');
+			yourself)
+		handler: [ :args |
+			| oldName newName |
+			oldName := args at: 'old_name' ifAbsent: [ nil ].
+			newName := args at: 'new_name' ifAbsent: [ nil ].
+			(oldName isNil or: [ newName isNil ])
+				ifTrue: [ 'Error: old_name and new_name are required' ]
+				ifFalse: [ MCPPharoTools renameClass: oldName to: newName ] ]
 ]
 
 { #category : 'running' }

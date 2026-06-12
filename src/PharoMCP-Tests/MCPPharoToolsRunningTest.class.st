@@ -458,6 +458,41 @@ MCPPharoToolsRunningTest >> testRemoveClassWithSubclassesFails [
 		(Smalltalk globals includesKey: parent asSymbol) ifTrue: [ (Smalltalk globals at: parent asSymbol) removeFromSystem ] ]
 ]
 
+{ #category : 'tests - renameClass' }
+MCPPharoToolsRunningTest >> testRenameClassConflict [
+	| result |
+	result := MCPPharoTools renameClass: 'MCPServer' to: 'MCPTool'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'already exists')
+]
+
+{ #category : 'tests - renameClass' }
+MCPPharoToolsRunningTest >> testRenameClassSuccess [
+	| result |
+	MCPPharoTools createClass: 'MCPTestOldNameHHH' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
+	[ result := MCPPharoTools renameClass: 'MCPTestOldNameHHH' to: 'MCPTestNewNameHHH'.
+	self assert: (result includesSubstring: 'MCPTestOldNameHHH').
+	self assert: (result includesSubstring: 'MCPTestNewNameHHH').
+	self deny: (Smalltalk globals includesKey: #MCPTestOldNameHHH).
+	self assert: (Smalltalk globals includesKey: #MCPTestNewNameHHH) ]
+	ensure: [
+		(Smalltalk globals includesKey: #MCPTestOldNameHHH) ifTrue: [ (Smalltalk globals at: #MCPTestOldNameHHH) removeFromSystem ].
+		(Smalltalk globals includesKey: #MCPTestNewNameHHH) ifTrue: [ (Smalltalk globals at: #MCPTestNewNameHHH) removeFromSystem ] ]
+]
+
+{ #category : 'tests - renameClass' }
+MCPPharoToolsRunningTest >> testRenameClassToolInAllTools [
+	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'class_rename' ])
+]
+
+{ #category : 'tests - renameClass' }
+MCPPharoToolsRunningTest >> testRenameClassUnknown [
+	| result |
+	result := MCPPharoTools renameClass: 'NoSuchClassXYZ' to: 'AnyName'.
+	self assert: (result beginsWith: 'Error').
+	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+]
+
 { #category : 'tests - renameMethod' }
 MCPPharoToolsRunningTest >> testRenameMethodSuccess [
 	| cls result |
