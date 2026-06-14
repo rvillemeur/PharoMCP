@@ -134,6 +134,25 @@ MCPServer >> initialize [
 	logger := MCPNullLogger new
 ]
 
+{ #category : 'inspector' }
+MCPServer >> inspectionStatus: aBuilder [
+	<inspectorPresentationOrder: 0 title: 'Status'>
+	^ (StSimpleInspectorBuilder on: aBuilder)
+		key: 'Port' value: port printString;
+		key: 'Running' value: self isRunning printString;
+		key: 'Tools' value: (processor ifNil: [ '0' ] ifNotNil: [ :p | p tools size printString ]);
+		key: 'Logger' value: logger class name;
+		table
+]
+
+{ #category : 'inspector' }
+MCPServer >> inspectionTools: aBuilder [
+	<inspectorPresentationOrder: 10 title: 'Tools'>
+	^ processor
+		ifNil: [ aBuilder newText text: '(server not started)'; yourself ]
+		ifNotNil: [ :p | p inspectionTools: aBuilder ]
+]
+
 { #category : 'testing' }
 MCPServer >> isLogging [
 	^ logger isActive

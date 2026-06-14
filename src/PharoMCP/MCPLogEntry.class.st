@@ -99,6 +99,17 @@ MCPLogEntry >> initializeFromRequest: reqJson response: respJson [
 	self parseRequest: reqJson
 ]
 
+{ #category : 'inspector' }
+MCPLogEntry >> inspectionDetails: aBuilder [
+	<inspectorPresentationOrder: 0 title: 'Details'>
+	^ (StSimpleInspectorBuilder on: aBuilder)
+		key: 'Tool' value: (toolName ifNil: [ '—' ]);
+		key: 'Method' value: (method ifNil: [ '—' ]);
+		key: 'Timestamp' value: timestamp printString;
+		key: 'Args' value: (toolArgs ifNil: [ '—' ] ifNotNil: [ :a | NeoJSONWriter toString: a ]);
+		table
+]
+
 { #category : 'accessing' }
 MCPLogEntry >> method [
 	^ method

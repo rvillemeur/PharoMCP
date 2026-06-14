@@ -116,6 +116,18 @@ MCPRequestProcessor >> initialize [
 	tools := Dictionary new
 ]
 
+{ #category : 'inspector' }
+MCPRequestProcessor >> inspectionTools: aBuilder [
+	<inspectorPresentationOrder: 0 title: 'Tools'>
+	| sorted |
+	sorted := tools values asSortedCollection: [ :a :b | a name < b name ].
+	^ aBuilder newTable
+		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :t | t name ]);
+		addColumn: (SpStringTableColumn title: 'Description' evaluated: [ :t | t description truncateWithElipsisTo: 80 ]);
+		items: sorted;
+		yourself
+]
+
 { #category : 'processing' }
 MCPRequestProcessor >> processRawRequest: jsonString [
 	| request |

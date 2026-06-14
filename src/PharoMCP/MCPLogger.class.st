@@ -55,6 +55,17 @@ MCPLogger >> initialize [
 	entries := OrderedCollection new
 ]
 
+{ #category : 'inspector' }
+MCPLogger >> inspectionEntries: aBuilder [
+	<inspectorPresentationOrder: 0 title: 'Entries'>
+	| limited |
+	limited := entries size > 100 ifTrue: [ entries last: 100 ] ifFalse: [ entries ].
+	^ aBuilder newList
+		display: [ :e | e toolName ifNil: [ e method ifNil: [ '?' ] ] ifNotNil: [ :n | n , ' @ ' , e timestamp printString ] ];
+		items: limited reversed;
+		yourself
+]
+
 { #category : 'testing' }
 MCPLogger >> isActive [
 	^ true

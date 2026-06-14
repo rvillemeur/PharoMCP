@@ -84,6 +84,15 @@ MCPTool >> inputSchema: aDictionary [
 	inputSchema := aDictionary
 ]
 
+{ #category : 'inspector' }
+MCPTool >> inspectionSchema: aBuilder [
+	<inspectorPresentationOrder: 0 title: 'Schema'>
+	^ aBuilder newCode
+		syntaxHighlight: false;
+		text: (NeoJSONWriter toStringPretty: inputSchema);
+		yourself
+]
+
 { #category : 'accessing' }
 MCPTool >> name [
 	^ name
