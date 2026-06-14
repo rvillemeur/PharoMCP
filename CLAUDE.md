@@ -34,11 +34,12 @@ Workspace source: `src/` (Tonel format). Keep in sync with image after changes.
 
 ## Pending work
 
-No open items. All original tasks complete. Tools added beyond original scope:
+No open items. Tools added beyond original scope:
 
 - `class_comment`, `class_remove`, `class_rename` — class lifecycle
 - `method_rename`, `method_move` — method refactoring
 - `package_create`, `package_remove` — package lifecycle
+- Inspector extensions on `MCPServer`, `MCPRequestProcessor`, `MCPTool`, `MCPLogEntry`, `MCPLogger`
 
 Current tool count: 22. Test suite: 244 tests, all pass.
 
