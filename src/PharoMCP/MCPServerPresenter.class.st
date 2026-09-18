@@ -217,9 +217,8 @@ MCPServerPresenter >> updateTitle [
 
 { #category : 'accessing' }
 MCPServerPresenter >> windowTitle [
-
 	server ifNil: [ ^ 'PharoMCP Server' ].
-	^ 'PharoMCP Server — ' , (server isRunning
+	^ 'PharoMCP Server - ' , (server isRunning
 		   ifTrue: [ 'running on port ' , server port printString ]
 		   ifFalse: [ 'not running' ])
 ]
