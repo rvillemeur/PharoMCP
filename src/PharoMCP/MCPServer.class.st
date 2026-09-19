@@ -65,15 +65,17 @@ MCPServer >> announcer [
 
 { #category : 'private' }
 MCPServer >> buildResponseFor: result [
-	^ self addCorsHeadersTo: (result
-		ifNil: [
-			ZnResponse new
-				statusLine: ZnStatusLine ok;
-				yourself ]
-		ifNotNil: [
-			ZnResponse ok: (ZnEntity
-				with: result
-				type: ZnMimeType applicationJson) ])
+        "Notifications (nil result) get 202 Accepted with explicit empty body, per MCP Streamable HTTP.
+        Without Content-Length the keep-alive client waits forever for a body."
+        | response |
+        result ifNotNil: [
+                ^ self addCorsHeadersTo: (ZnResponse ok: (ZnEntity
+                        with: result
+                        type: ZnMimeType applicationJson)) ].
+        response := ZnResponse new.
+        response statusLine: (ZnStatusLine code: 202).
+        response headers at: 'Content-Length' put: '0'.
+        ^ self addCorsHeadersTo: response
 ]
 
 { #category : 'private' }
@@ -93,9 +95,11 @@ MCPServer >> handleNonPostRequest [
 
 { #category : 'private' }
 MCPServer >> handleOptionsRequest [
-	^ self addCorsHeadersTo: (ZnResponse new
-		statusLine: ZnStatusLine ok;
-		yourself)
+        | response |
+        response := ZnResponse new.
+        response statusLine: ZnStatusLine ok.
+        response headers at: 'Content-Length' put: '0'.
+        ^ self addCorsHeadersTo: response
 ]
 
 { #category : 'private' }

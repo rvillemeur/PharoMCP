@@ -21,11 +21,12 @@ MCPServerTest >> tearDown [
 ]
 
 { #category : 'tests - private' }
-MCPServerTest >> testBuildResponseForNilReturns200NoBody [
-	| response |
-	response := server buildResponseFor: nil.
-	self assert: response statusLine code equals: 200.
-	self assert: response entity isNil
+MCPServerTest >> testBuildResponseForNilReturns202EmptyBody [                                             
+        | response |                                                                                             
+        response := server buildResponseFor: nil.       
+        self assert: response statusLine code equals: 202.                                                       
+        self assert: response entity isNil.
+        self assert: (response headers at: 'Content-Length') equals: '0'
 ]
 
 { #category : 'tests - private' }
