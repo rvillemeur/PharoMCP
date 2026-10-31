@@ -1077,10 +1077,17 @@ MCPPharoTools class >> setClassComment: comment onClass: className [
 
 { #category : 'private' }
 MCPPharoTools class >> writeMatchEntry: m norm: norm to: s [
+
 	| matchLine |
-	s << m methodClass name; << ' >> #'; << m selector; nextPut: Character lf.
-	matchLine := m sourceCode lines
-		detect: [ :l | l asLowercase includesSubstring: norm ]
-		ifNone: [ nil ].
-	matchLine ifNotNil: [ s << '  '; << matchLine trimmed; nextPut: Character lf ]
+	s
+		<< m methodClass name;
+		<< ' >> #';
+		<< m selector;
+		nextPut: Character lf.
+	matchLine := m sourceCode lines detect: [ :l | l asLowercase includesSubstring: norm ] ifNone: [ nil ].
+	matchLine ifNotNil: [
+			s
+				<< '  ';
+				<< matchLine trimBoth;
+				nextPut: Character lf ]
 ]
