@@ -22,6 +22,25 @@ Class {
 }
 
 { #category : 'constants' }
+MCPRequestProcessor class >> capabilities [
+
+	"What the initialize result declares. Resources carry no subscription and no change
+	 notification, because the server has no stream to send one on."
+
+	^ Dictionary new
+		at: 'tools' put: Dictionary new;
+		at: 'completions' put: Dictionary new;
+		at: 'resources' put: Dictionary new;
+		yourself
+]
+
+{ #category : 'constants' }
+MCPRequestProcessor class >> classUriPrefix [
+
+	^ 'pharo://class/'
+]
+
+{ #category : 'constants' }
 MCPRequestProcessor class >> completionSources [
 
 	"Each key is the prefix of a pharo:// resource URI, and each value answers the whole
@@ -30,10 +49,10 @@ MCPRequestProcessor class >> completionSources [
 	 copy of it would go stale on the next compile."
 
 	^ Dictionary new
-		at: 'pharo://class' put: [ Smalltalk globals keys select: [ :each |
+		at: self classUriPrefix put: [ Smalltalk globals keys select: [ :each |
 			(Smalltalk globals at: each) isBehavior ] ];
-		at: 'pharo://package' put: [ Smalltalk packageOrganizer packageNames ];
-		at: 'pharo://selector' put: [ Symbol selectorTable ];
+		at: self packageUriPrefix put: [ Smalltalk packageOrganizer packageNames ];
+		at: self selectorUriPrefix put: [ Symbol selectorTable ];
 		yourself
 ]
 
@@ -49,6 +68,9 @@ MCPRequestProcessor class >> handlerSelectors [
 		at: 'tools/list' put: #handleToolsList:id:;
 		at: 'tools/call' put: #handleToolsCall:id:;
 		at: 'completion/complete' put: #handleCompletionComplete:id:;
+		at: 'resources/list' put: #handleResourcesList:id:;
+		at: 'resources/templates/list' put: #handleResourcesTemplatesList:id:;
+		at: 'resources/read' put: #handleResourcesRead:id:;
 		yourself
 ]
 
@@ -89,12 +111,63 @@ MCPRequestProcessor class >> maximumResultSize [
 	^ 10000
 ]
 
+{ #category : 'resources' }
+MCPRequestProcessor class >> methodSourcesOf: aBehavior [
+
+	^ aBehavior selectors asSortedCollection asArray collect: [ :each |
+		aBehavior name , ' >> ' , each , String cr , (aBehavior >> each) sourceCode ]
+]
+
+{ #category : 'constants' }
+MCPRequestProcessor class >> packageUriPrefix [
+
+	^ 'pharo://package/'
+]
+
+{ #category : 'constants' }
+MCPRequestProcessor class >> resourceNotFoundCode [
+
+	"The code the specification reserves for a resource URI that answers nothing."
+
+	^ -32002
+]
+
+{ #category : 'resources' }
+MCPRequestProcessor class >> resourceSources [
+
+	"One table behind resources/templates/list and resources/read, so a kind of resource
+	 cannot be offered as a template and then answer nothing when it is read."
+
+	^ Dictionary new
+		at: self classUriPrefix put: (Dictionary new
+			at: 'parameter' put: 'className';
+			at: 'name' put: 'Pharo class';
+			at: 'description' put: 'Definition, class comment and full method source of one class.';
+			at: 'reader' put: [ :className | self sourceOfClassNamed: className ];
+			yourself);
+		at: self packageUriPrefix put: (Dictionary new
+			at: 'parameter' put: 'packageName';
+			at: 'name' put: 'Pharo package';
+			at: 'description' put: 'Class names, with their comments, of one package.';
+			at: 'reader' put: [ :packageName | self sourceOfPackageNamed: packageName ];
+			yourself);
+		yourself
+]
+
 { #category : 'constants' }
 MCPRequestProcessor class >> samplePrefixSize [
 
 	"Letters of a sampled name the Completion inspector view uses as a prefix."
 
 	^ 3
+]
+
+{ #category : 'constants' }
+MCPRequestProcessor class >> selectorUriPrefix [
+
+	"Selectors are completed but not read: a selector alone names no source."
+
+	^ 'pharo://selector/'
 ]
 
 { #category : 'accessing - server info' }
@@ -114,6 +187,40 @@ MCPRequestProcessor class >> serverVersion [
 	 the tool set changes, not on every commit."
 
 	^ '1.1.0'
+]
+
+{ #category : 'constants' }
+MCPRequestProcessor class >> sourceMimeType [
+
+	^ 'text/x-smalltalk'
+]
+
+{ #category : 'resources' }
+MCPRequestProcessor class >> sourceOfClassNamed: aString [
+
+	"nil, rather than an empty text, when the image holds no such class: the caller turns
+	 that into the resource-not-found error the specification asks for."
+
+	| class |
+	class := Smalltalk globals at: aString asSymbol ifAbsent: [ ^ nil ].
+	class isBehavior ifFalse: [ ^ nil ].
+	^ String cr join: (
+		(OrderedCollection new
+			add: class definitionString;
+			add: '"' , (class comment ifNil: [ '' ]) , '"';
+			yourself) ,
+		(self methodSourcesOf: class) ,
+		(self methodSourcesOf: class classSide))
+]
+
+{ #category : 'resources' }
+MCPRequestProcessor class >> sourceOfPackageNamed: aString [
+
+	| package |
+	package := Smalltalk packageOrganizer packageNamed: aString ifAbsent: [ ^ nil ].
+	^ String cr join: ((package classes asSortedCollection: [ :a :b | a name <= b name ]) asArray
+		collect: [ :each |
+			each name , String cr , '"' , (each comment ifNil: [ '' ]) , '"' ])
 ]
 
 { #category : 'protocol versions' }
@@ -223,10 +330,7 @@ MCPRequestProcessor >> handleInitialize: params id: id [
 	^ self
 		successResponseWithResult: (Dictionary new
 			at: 'protocolVersion' put: (self negotiatedProtocolVersionFor: params);
-			at: 'capabilities' put: (Dictionary new
-				at: 'tools' put: Dictionary new;
-				at: 'completions' put: Dictionary new;
-				yourself);
+			at: 'capabilities' put: self class capabilities;
 			at: 'serverInfo' put: (Dictionary new
 				at: 'name' put: self class serverName;
 				at: 'version' put: self class serverVersion;
@@ -243,6 +347,66 @@ MCPRequestProcessor >> handlePing: params id: id [
 	 handlerSelectors has the same shape."
 
 	^ self successResponseWithResult: Dictionary new id: id
+]
+
+{ #category : 'handlers' }
+MCPRequestProcessor >> handleResourcesList: params id: id [
+
+	"Packages are the listed resources; the image holds some fifteen thousand classes, so a
+	 class is reached through its template instead of being listed one by one."
+
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'resources' put: (Smalltalk packageOrganizer packageNames asSortedCollection asArray
+				collect: [ :each |
+					Dictionary new
+						at: 'uri' put: self class packageUriPrefix , each;
+						at: 'name' put: each;
+						at: 'mimeType' put: self class sourceMimeType;
+						yourself ]);
+			yourself)
+		id: id
+]
+
+{ #category : 'handlers' }
+MCPRequestProcessor >> handleResourcesRead: params id: id [
+
+	| uri text |
+	uri := params at: 'uri' ifAbsent: [
+		^ self errorResponseWithId: id code: -32602 message: 'Missing parameter: uri' ].
+	text := self resourceTextFor: uri.
+	text ifNil: [
+		^ self
+			errorResponseWithId: id
+			code: self class resourceNotFoundCode
+			message: 'Resource not found: ' , uri ].
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'contents' put: { Dictionary new
+				at: 'uri' put: uri;
+				at: 'mimeType' put: self class sourceMimeType;
+				at: 'text' put: text;
+				yourself };
+			yourself)
+		id: id
+]
+
+{ #category : 'handlers' }
+MCPRequestProcessor >> handleResourcesTemplatesList: params id: id [
+
+	| templates |
+	templates := self class resourceSources associations asSortedCollection: [ :a :b | a key <= b key ].
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'resourceTemplates' put: (templates asArray collect: [ :each |
+				Dictionary new
+					at: 'uriTemplate' put: each key , '{' , (each value at: 'parameter') , '}';
+					at: 'name' put: (each value at: 'name');
+					at: 'description' put: (each value at: 'description');
+					at: 'mimeType' put: self class sourceMimeType;
+					yourself ]);
+			yourself)
+		id: id
 ]
 
 { #category : 'handling' }
@@ -321,6 +485,24 @@ MCPRequestProcessor >> inspectionProtocol: aBuilder [
 ]
 
 { #category : 'inspector' }
+MCPRequestProcessor >> inspectionResources: aBuilder [
+
+	<inspectorPresentationOrder: 4 title: 'Resources'>
+
+	"Each row reads the resource the template would build for a name taken from the source
+	 itself, so a template that is offered but unreadable shows an empty size here."
+
+	^ aBuilder newTable
+		items: (self class resourceSources keys asSortedCollection asArray collect: [ :prefix |
+			self resourceReportFor: prefix ]);
+		addColumn: (SpStringTableColumn title: 'Template' evaluated: [ :each | each at: 'template' ]);
+		addColumn: (SpStringTableColumn title: 'Sample' evaluated: [ :each | each at: 'sample' ]);
+		addColumn: (SpStringTableColumn title: 'Characters read' evaluated: [ :each |
+			(each at: 'size') printString ]);
+		yourself
+]
+
+{ #category : 'inspector' }
 MCPRequestProcessor >> inspectionTools: aBuilder [
 	<inspectorPresentationOrder: 0 title: 'Tools'>
 	| sorted |
@@ -368,6 +550,36 @@ MCPRequestProcessor >> processRawRequest: jsonString [
 { #category : 'tool management' }
 MCPRequestProcessor >> registerTool: aTool [
 	tools at: aTool name put: aTool
+]
+
+{ #category : 'resources' }
+MCPRequestProcessor >> resourceReportFor: aPrefix [
+
+	"What one resource kind answers right now, read through the real method with a name
+	 sampled from the matching completion source."
+
+	| source names sample text |
+	source := self class resourceSources at: aPrefix.
+	names := self completionNamesFor: aPrefix startingWith: ''.
+	sample := names ifEmpty: [ '' ] ifNotEmpty: [ names first ].
+	text := sample ifEmpty: [ '' ] ifNotEmpty: [ self resourceTextFor: aPrefix , sample ].
+	^ Dictionary new
+		at: 'template' put: aPrefix , '{' , (source at: 'parameter') , '}';
+		at: 'sample' put: sample;
+		at: 'size' put: (text ifNil: [ 0 ] ifNotNil: [ :found | found size ]);
+		yourself
+]
+
+{ #category : 'resources' }
+MCPRequestProcessor >> resourceTextFor: aUri [
+
+	"nil when no source claims the URI, or when the one that does holds no such name."
+
+	| source |
+	source := self class resourceSources associations
+		detect: [ :each | aUri beginsWith: each key ]
+		ifNone: [ ^ nil ].
+	^ (source value at: 'reader') value: (aUri allButFirst: source key size)
 ]
 
 { #category : 'private' }

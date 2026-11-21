@@ -40,6 +40,15 @@ MCPRequestProcessorExamples class >> processor [
 ]
 
 { #category : 'examples' }
+MCPRequestProcessorExamples class >> resourceReadResponse [
+
+	<sampleInstance>
+	| request |
+	request := '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"pharo://class/MCPLogEntry"}}'.
+	^ MCPRequestProcessor new processRawRequest: request
+]
+
+{ #category : 'examples' }
 MCPRequestProcessorExamples class >> toolsListResponse [
 
 	<sampleInstance>

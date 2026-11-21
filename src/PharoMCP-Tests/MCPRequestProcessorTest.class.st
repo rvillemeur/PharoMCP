@@ -67,6 +67,14 @@ MCPRequestProcessorTest >> resourceReference: aUri [
 		yourself
 ]
 
+{ #category : 'helpers' }
+MCPRequestProcessorTest >> resultOf: method params: params [
+
+	| response |
+	response := processor processRawRequest: (self request: method id: 9 params: params).
+	^ (self parse: response) at: 'result'
+]
+
 { #category : 'running' }
 MCPRequestProcessorTest >> setUp [
 	super setUp.
@@ -194,6 +202,14 @@ MCPRequestProcessorTest >> testInitializeDeclaresCompletionsCapability [
 	self assert: (capabilities includesKey: 'completions')
 ]
 
+{ #category : 'tests - resources' }
+MCPRequestProcessorTest >> testInitializeDeclaresResourcesCapability [
+
+	| capabilities |
+	capabilities := (self initializeResultWithVersion: nil) at: 'capabilities'.
+	self assert: (capabilities includesKey: 'resources')
+]
+
 { #category : 'tests - initialize' }
 MCPRequestProcessorTest >> testInitializeEchoesSupportedVersionRequestedByClient [
 
@@ -310,6 +326,83 @@ MCPRequestProcessorTest >> testPingAnswersEmptyResult [
 	self assert: (result at: 'id') equals: 7.
 	self deny: (result includesKey: 'error').
 	self assert: (result at: 'result') isEmpty
+]
+
+{ #category : 'tests - resources' }
+MCPRequestProcessorTest >> testResourceTemplatesCarryClassesAndPackages [
+
+	| templates uris |
+	templates := (self resultOf: 'resources/templates/list' params: Dictionary new)
+		at: 'resourceTemplates'.
+	uris := templates collect: [ :each | each at: 'uriTemplate' ].
+	self assert: (uris includes: 'pharo://class/{className}').
+	self assert: (uris includes: 'pharo://package/{packageName}').
+	self assert: (templates allSatisfy: [ :each |
+		(each includesKey: 'name') and: [ each includesKey: 'description' ] ])
+]
+
+{ #category : 'tests - resources' }
+MCPRequestProcessorTest >> testResourcesListCarriesEveryPackage [
+
+	"Packages are listed, classes are not: the image holds some fifteen thousand classes, so
+	 they are reachable through the class template instead."
+
+	| resources uris |
+	resources := (self resultOf: 'resources/list' params: Dictionary new) at: 'resources'.
+	uris := resources collect: [ :each | each at: 'uri' ].
+	self assert: (uris includes: 'pharo://package/PharoMCP').
+	self assert: resources size equals: Smalltalk packageOrganizer packageNames size.
+	self assert: (resources allSatisfy: [ :each |
+		(each at: 'uri') beginsWith: 'pharo://package/' ])
+]
+
+{ #category : 'tests - resources' }
+MCPRequestProcessorTest >> testResourcesReadAnswersClassSource [
+
+	| content |
+	content := ((self resultOf: 'resources/read' params: (Dictionary new
+		at: 'uri' put: 'pharo://class/MCPTool';
+		yourself)) at: 'contents') first.
+	self assert: (content at: 'uri') equals: 'pharo://class/MCPTool'.
+	self assert: (content at: 'mimeType') equals: MCPRequestProcessor sourceMimeType.
+	self assert: ((content at: 'text') includesSubstring: MCPTool definitionString).
+	self assert: ((content at: 'text') includesSubstring: (MCPTool comment first: 20)).
+	self assert: ((content at: 'text') includesSubstring: (MCPTool >> #asDictionary) sourceCode)
+]
+
+{ #category : 'tests - resources' }
+MCPRequestProcessorTest >> testResourcesReadAnswersPackageClassNames [
+
+	| content |
+	content := ((self resultOf: 'resources/read' params: (Dictionary new
+		at: 'uri' put: 'pharo://package/PharoMCP-Examples';
+		yourself)) at: 'contents') first.
+	self assert: (content at: 'uri') equals: 'pharo://package/PharoMCP-Examples'.
+	(Smalltalk packageOrganizer packageNamed: 'PharoMCP-Examples') classes do: [ :each |
+		self assert: ((content at: 'text') includesSubstring: each name) ]
+]
+
+{ #category : 'tests - resources' }
+MCPRequestProcessorTest >> testResourcesReadOfUnknownSchemeIsError [
+
+	| response error |
+	response := processor processRawRequest: (self request: 'resources/read' id: 9 params: (Dictionary new
+		at: 'uri' put: 'http://example.org/thing';
+		yourself)).
+	error := (self parse: response) at: 'error'.
+	self assert: (error at: 'code') equals: MCPRequestProcessor resourceNotFoundCode
+]
+
+{ #category : 'tests - resources' }
+MCPRequestProcessorTest >> testResourcesReadOfUnknownUriIsError [
+
+	| response error |
+	response := processor processRawRequest: (self request: 'resources/read' id: 9 params: (Dictionary new
+		at: 'uri' put: 'pharo://class/NoSuchClassHere';
+		yourself)).
+	error := (self parse: response) at: 'error'.
+	self assert: (error at: 'code') equals: MCPRequestProcessor resourceNotFoundCode.
+	self assert: ((error at: 'message') includesSubstring: 'NoSuchClassHere')
 ]
 
 { #category : 'tests' }
