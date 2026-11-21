@@ -43,13 +43,18 @@ MCPTool class >> name: aName description: aDescription schema: aSchema handler: 
 		yourself
 ]
 
-{ #category : 'annotating' }
+{ #category : 'annotations' }
 MCPTool >> additive [
+
+	^ self annotations: self additiveHints
+]
+
+{ #category : 'annotations' }
+MCPTool >> additiveHints [
 
 	"Changes the image but destroys nothing: it adds a class, a method or a package, or it
 	 overwrites one the caller named. Running it twice leaves the same image."
-
-	^ self readOnlyHint: false destructiveHint: false idempotentHint: true
+	^ self hintsReadOnly: false destructive: false idempotent: true
 ]
 
 { #category : 'accessing' }
@@ -88,9 +93,12 @@ MCPTool >> asDictionary [
 	^ dictionary
 ]
 
-{ #category : 'executing' }
+{ #category : 'calling' }
 MCPTool >> call: arguments [
-	^ handler value: arguments
+
+	"What the request processor sends. A subclass states its answer in execute:; the tools built
+	 from a block answer through the block."
+	^ self execute: arguments
 ]
 
 { #category : 'accessing' }
@@ -103,12 +111,24 @@ MCPTool >> description: aString [
 	description := aString
 ]
 
-{ #category : 'annotating' }
+{ #category : 'annotations' }
 MCPTool >> destructive [
 
-	"Removes code from the image, so a client asks its user before it calls the tool."
+	^ self annotations: self destructiveHints
+]
 
-	^ self readOnlyHint: false destructiveHint: true idempotentHint: false
+{ #category : 'annotations' }
+MCPTool >> destructiveHints [
+
+	"Removes code from the image, so a client asks its user before it calls the tool."
+	^ self hintsReadOnly: false destructive: true idempotent: false
+]
+
+{ #category : 'calling' }
+MCPTool >> execute: arguments [
+
+	"The hook a subclass overrides. A tool built from a block answers through the block."
+	^ handler value: arguments
 ]
 
 { #category : 'accessing' }
@@ -119,6 +139,19 @@ MCPTool >> handler [
 { #category : 'accessing' }
 MCPTool >> handler: aBlock [
 	handler := aBlock
+]
+
+{ #category : 'annotations' }
+MCPTool >> hintsReadOnly: readOnlyBoolean destructive: destructiveBoolean idempotent: idempotentBoolean [
+
+	"openWorldHint is false for every tool of this server: all of them act on the one local
+	 image, none reaches a network or a service whose answer could change on its own."
+	^ Dictionary new
+		at: 'readOnlyHint' put: readOnlyBoolean;
+		at: 'destructiveHint' put: destructiveBoolean;
+		at: 'idempotentHint' put: idempotentBoolean;
+		at: 'openWorldHint' put: false;
+		yourself
 ]
 
 { #category : 'accessing' }
@@ -185,26 +218,82 @@ MCPTool >> outputSchema: aDictionary [
 	outputSchema := aDictionary
 ]
 
-{ #category : 'annotating' }
+{ #category : 'annotations' }
 MCPTool >> readOnly [
 
-	"Reads the image and changes nothing, so a client may call it without asking its user."
-
-	^ self readOnlyHint: true destructiveHint: false idempotentHint: true
+	^ self annotations: self readOnlyHints
 ]
 
-{ #category : 'annotating' }
+{ #category : 'annotations' }
 MCPTool >> readOnlyHint: readOnlyBoolean destructiveHint: destructiveBoolean idempotentHint: idempotentBoolean [
 
-	"openWorldHint is false for every tool of this server: all of them act on the one local
-	 image, none reaches a network or a service whose answer could change on its own."
+	^ self annotations: (self
+		hintsReadOnly: readOnlyBoolean
+		destructive: destructiveBoolean
+		idempotent: idempotentBoolean)
+]
 
-	^ self annotations: (Dictionary new
-		at: 'readOnlyHint' put: readOnlyBoolean;
-		at: 'destructiveHint' put: destructiveBoolean;
-		at: 'idempotentHint' put: idempotentBoolean;
-		at: 'openWorldHint' put: false;
-		yourself)
+{ #category : 'annotations' }
+MCPTool >> readOnlyHints [
+
+	"Reads the image and changes nothing, so a client may call it without asking its user."
+	^ self hintsReadOnly: true destructive: false idempotent: true
+]
+
+{ #category : 'schemas' }
+MCPTool >> schemaArrayOfMessagesDescribedAs: aDescription [
+
+	^ Dictionary new
+		at: 'type' put: 'array';
+		at: 'description' put: aDescription;
+		at: 'items' put: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'selector' put: (self schemaPropertyOfType: 'string' describedAs: 'Test method selector');
+				at: 'message' put: (self schemaPropertyOfType: 'string' describedAs: 'What the test reported');
+				yourself);
+			yourself);
+		yourself
+]
+
+{ #category : 'schemas' }
+MCPTool >> schemaPropertyOfType: aTypeName describedAs: aDescription [
+
+	^ Dictionary new
+		at: 'type' put: aTypeName;
+		at: 'description' put: aDescription;
+		yourself
+]
+
+{ #category : 'schemas' }
+MCPTool >> schemaPropertyOneOf: allowedValues describedAs: aDescription [
+
+	^ Dictionary new
+		at: 'type' put: 'string';
+		at: 'enum' put: allowedValues;
+		at: 'description' put: aDescription;
+		yourself
+]
+
+{ #category : 'schemas' }
+MCPTool >> schemaSideProperty [
+
+	"The side argument six tools take. It means the same in each of them, so it reads the same."
+	^ self
+		schemaPropertyOneOf: #( 'instance' 'class' )
+		describedAs: 'Whether the method is on the instance side or the class side. Defaults to instance.'
+]
+
+{ #category : 'schemas' }
+MCPTool >> schemaWithProperties: propertyAssociations required: requiredNames [
+
+	"The JSON Schema shape every tool declares. A tool states the properties it takes and the
+	 names a call must carry, and nothing else."
+	^ Dictionary new
+		at: 'type' put: 'object';
+		at: 'properties' put: propertyAssociations asDictionary;
+		at: 'required' put: requiredNames;
+		yourself
 ]
 
 { #category : 'accessing' }
