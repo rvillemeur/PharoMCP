@@ -37,6 +37,16 @@ MCPServerTest >> postRequestWithOrigin: anOriginOrNil [
 	^ request
 ]
 
+{ #category : 'private' }
+MCPServerTest >> postRequestWithProtocolVersion: aStringOrNil [
+
+	| request |
+	request := self postRequest.
+	aStringOrNil ifNotNil: [ :version |
+		request headers at: MCPServer protocolVersionHeaderName put: version ].
+	^ request
+]
+
 { #category : 'running' }
 MCPServerTest >> setUp [
 	super setUp.
@@ -211,6 +221,14 @@ MCPServerTest >> testLoopbackServerStillServesLocalhost [
 	self assert: (body includesKey: 'result')
 ]
 
+{ #category : 'tests - protocol version' }
+MCPServerTest >> testMissingProtocolVersionHeaderIsAccepted [
+
+	| response |
+	response := server handleRequest: (self postRequestWithProtocolVersion: nil).
+	self assert: response statusLine code equals: 200
+]
+
 { #category : 'tests' }
 MCPServerTest >> testNotRunningBeforeStart [
 	self deny: server isRunning
@@ -308,10 +326,27 @@ MCPServerTest >> testStartAndStop [
 	self deny: server isRunning
 ]
 
+{ #category : 'tests - protocol version' }
+MCPServerTest >> testSupportedProtocolVersionHeaderIsAccepted [
+
+	| response |
+	response := server handleRequest:
+		(self postRequestWithProtocolVersion: MCPRequestProcessor latestProtocolVersion).
+	self assert: response statusLine code equals: 200
+]
+
 { #category : 'tests - token' }
 MCPServerTest >> testTokenlessServerAcceptsRequestWithoutAuthorization [
 
 	| response |
 	response := server handleRequest: (self postRequestWithAuthorization: nil).
 	self assert: response statusLine code equals: 200
+]
+
+{ #category : 'tests - protocol version' }
+MCPServerTest >> testUnsupportedProtocolVersionHeaderIsBadRequest [
+
+	| response |
+	response := server handleRequest: (self postRequestWithProtocolVersion: '1999-01-01').
+	self assert: response statusLine code equals: 400
 ]

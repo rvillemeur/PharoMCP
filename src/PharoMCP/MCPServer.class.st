@@ -47,6 +47,15 @@ MCPServer class >> allowedOriginPrefixes [
 ]
 
 { #category : 'accessing' }
+MCPServer class >> assumedProtocolVersion [
+
+	"The specification says a request with no MCP-Protocol-Version header is to be read as this
+	 revision, the last one that did not require the header."
+
+	^ '2025-03-26'
+]
+
+{ #category : 'accessing' }
 MCPServer class >> authorizationHeaderName [
 
 	^ 'Authorization'
@@ -86,6 +95,12 @@ MCPServer class >> onPort: aPort [
 		yourself
 ]
 
+{ #category : 'accessing' }
+MCPServer class >> protocolVersionHeaderName [
+
+	^ 'MCP-Protocol-Version'
+]
+
 { #category : 'private' }
 MCPServer >> addCorsHeadersTo: aResponse [
 
@@ -108,6 +123,15 @@ MCPServer >> addCorsHeadersTo: aResponse origin: anOriginOrNil [
 { #category : 'accessing' }
 MCPServer >> announcer [
 	^ announcer
+]
+
+{ #category : 'private' }
+MCPServer >> badRequestResponse [
+
+	^ ZnResponse new
+		statusLine: ZnStatusLine badRequest;
+		entity: (ZnEntity text: 'Unsupported ' , self class protocolVersionHeaderName);
+		yourself
 ]
 
 { #category : 'accessing' }
@@ -191,9 +215,8 @@ MCPServer >> handleRequest: request [
 	"Functional delegate protocol — ZnServer uses the returned ZnResponse"
 
 	| origin body result |
+	(self rejectionFor: request) ifNotNil: [ :rejection | ^ rejection ].
 	origin := self originOf: request.
-	(self isOriginAllowed: origin) ifFalse: [ ^ self forbiddenResponse ].
-	(self isAuthorized: request) ifFalse: [ ^ self unauthorizedResponse ].
 	request method = 'OPTIONS' ifTrue: [
 		^ self addCorsHeadersTo: self handleOptionsRequest origin: origin ].
 	request method ~= 'POST' ifTrue: [
@@ -240,6 +263,7 @@ MCPServer >> inspectionStatus: aBuilder [
 		key: 'Foreign origin' value: (self isOriginAllowed: 'https://evil.example') printString;
 		key: 'Token required' value: token notNil printString;
 		key: 'Request without credential' value: (self isAuthorized: ZnRequest empty) printString;
+		key: 'Request without version header' value: (self isProtocolVersionAccepted: ZnRequest empty) printString;
 		table
 ]
 
@@ -270,6 +294,16 @@ MCPServer >> isOriginAllowed: anOriginOrNil [
 
 	anOriginOrNil ifNil: [ ^ true ].
 	^ self class allowedOriginPrefixes anySatisfy: [ :each | anOriginOrNil beginsWith: each ]
+]
+
+{ #category : 'private' }
+MCPServer >> isProtocolVersionAccepted: aRequest [
+
+	| version |
+	version := aRequest headers
+		at: self class protocolVersionHeaderName
+		ifAbsent: [ self class assumedProtocolVersion ].
+	^ MCPRequestProcessor supportedProtocolVersions includes: version
 ]
 
 { #category : 'testing' }
@@ -315,6 +349,17 @@ MCPServer >> processor [
 { #category : 'tool management' }
 MCPServer >> registerTool: aTool [
 	processor registerTool: aTool
+]
+
+{ #category : 'private' }
+MCPServer >> rejectionFor: aRequest [
+
+	"nil when the request passes every gate the specification asks a local server to keep."
+
+	(self isOriginAllowed: (self originOf: aRequest)) ifFalse: [ ^ self forbiddenResponse ].
+	(self isAuthorized: aRequest) ifFalse: [ ^ self unauthorizedResponse ].
+	(self isProtocolVersionAccepted: aRequest) ifFalse: [ ^ self badRequestResponse ].
+	^ nil
 ]
 
 { #category : 'accessing' }
