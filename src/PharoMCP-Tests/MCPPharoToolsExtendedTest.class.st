@@ -31,8 +31,12 @@ MCPPharoToolsExtendedTest >> testClassHierarchyOnMissingClassName [
 
 { #category : 'tests - class_hierarchy' }
 MCPPharoToolsExtendedTest >> testClassHierarchyOnUnknownClass [
-	| r | r := self call: 'class_hierarchy' args: (Dictionary new at: 'class_name' put: 'NoSuchXYZ'; yourself).
-	self assert: (r beginsWith: 'Error'). self assert: (r includesSubstring: 'NoSuchXYZ')
+
+	self
+		should: [ self call: 'class_hierarchy' args: (Dictionary new at: 'class_name' put: 'NoSuchXYZ'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchXYZ') ]
 ]
 
 { #category : 'tests - class_hierarchy' }
@@ -88,12 +92,15 @@ MCPPharoToolsExtendedTest >> testCompileMethodToolSuccess [
 
 { #category : 'tests' }
 MCPPharoToolsExtendedTest >> testCompileMethodToolUnknownClass [
-	| r |
-	r := self call: 'compile_method' args: (Dictionary new
-		at: 'class_name' put: 'NoSuchClassXYZ';
-		at: 'source' put: 'foo ^ 1';
-		yourself).
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ self call: 'compile_method' args: (Dictionary new
+			at: 'class_name' put: 'NoSuchClassXYZ';
+			at: 'source' put: 'foo ^ 1';
+			yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests' }
@@ -122,13 +129,16 @@ MCPPharoToolsExtendedTest >> testCreateClassToolSuccess [
 
 { #category : 'tests' }
 MCPPharoToolsExtendedTest >> testCreateClassToolUnknownSuperclass [
-	| r |
-	r := self call: 'class_create' args: (Dictionary new
-		at: 'class_name' put: 'TestCreateMCPXYZ';
-		at: 'superclass_name' put: 'NoSuchSuperXYZ';
-		at: 'package' put: 'PharoMCP-Tests';
-		yourself).
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ self call: 'class_create' args: (Dictionary new
+			at: 'class_name' put: 'TestCreateMCPXYZ';
+			at: 'superclass_name' put: 'NoSuchSuperXYZ';
+			at: 'package' put: 'PharoMCP-Tests';
+			yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchSuperXYZ') ]
 ]
 
 { #category : 'tests' }
@@ -151,12 +161,15 @@ MCPPharoToolsExtendedTest >> testDeleteMethodToolSuccess [
 
 { #category : 'tests' }
 MCPPharoToolsExtendedTest >> testDeleteMethodToolUnknownSelector [
-	| r |
-	r := self call: 'delete_method' args: (Dictionary new
-		at: 'class_name' put: 'MCPPharoToolsExtendedTest';
-		at: 'selector' put: 'noSuchXYZ';
-		yourself).
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ self call: 'delete_method' args: (Dictionary new
+			at: 'class_name' put: 'MCPPharoToolsExtendedTest';
+			at: 'selector' put: 'noSuchXYZ';
+			yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'noSuchXYZ') ]
 ]
 
 { #category : 'tests - find_implementors' }
@@ -247,19 +260,32 @@ MCPPharoToolsExtendedTest >> testListPackagesToolRegistered [
 
 { #category : 'tests - run_critics' }
 MCPPharoToolsExtendedTest >> testRunCriticsOnMissingArgs [
-	self assert: ((self call: 'run_critics' args: Dictionary new) beginsWith: 'Error')
+
+	self
+		should: [ self call: 'run_critics' args: Dictionary new ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'provide class_name or package') ]
 ]
 
 { #category : 'tests - run_critics' }
 MCPPharoToolsExtendedTest >> testRunCriticsOnUnknownClass [
-	| r | r := self call: 'run_critics' args: (Dictionary new at: 'class_name' put: 'NoSuchXYZ'; yourself).
-	self assert: (r beginsWith: 'Error'). self assert: (r includesSubstring: 'NoSuchXYZ')
+
+	self
+		should: [ self call: 'run_critics' args: (Dictionary new at: 'class_name' put: 'NoSuchXYZ'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchXYZ') ]
 ]
 
 { #category : 'tests - run_critics' }
 MCPPharoToolsExtendedTest >> testRunCriticsOnUnknownPackage [
-	| r | r := self call: 'run_critics' args: (Dictionary new at: 'package' put: 'NoSuchPkgXYZ'; yourself).
-	self assert: (r beginsWith: 'Error'). self assert: (r includesSubstring: 'NoSuchPkgXYZ')
+
+	self
+		should: [ self call: 'run_critics' args: (Dictionary new at: 'package' put: 'NoSuchPkgXYZ'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchPkgXYZ') ]
 ]
 
 { #category : 'tests' }

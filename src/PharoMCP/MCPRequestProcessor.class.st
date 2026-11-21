@@ -765,23 +765,25 @@ MCPRequestProcessor >> resourceTextFor: aUri [
 	^ (source value at: 'reader') value: (aUri allButFirst: source key size)
 ]
 
-{ #category : 'private' }
+{ #category : 'handlers' }
 MCPRequestProcessor >> resultOfCalling: aTool with: arguments id: id [
 
-          | result isError |
-          isError := false.
-          result := [ aTool call: arguments ]
-                  on: Error
-                  do: [ :e |
-                          isError := true.
-                          'Error: ' , e messageText ].
-          (isError not and: [ aTool answersStructuredContent: result ]) ifTrue: [
-                  ^ self
-                          toolResult: (self truncated: (NeoJSONWriter toStringPretty: result))
-                          structured: result
-                          id: id ].
-          result isString ifFalse: [ result := result printString ].
-          ^ self toolResult: (self truncated: result) isError: isError id: id
+	| result isError |
+	isError := false.
+	result := [ aTool call: arguments ]
+		on: Error
+		do: [ :e |
+			isError := true.
+			"messageText is nil for errors signalled without one, and a nil would
+			 break the concatenation inside this handler, which nothing catches."
+			'Error: ' , (e messageText ifNil: [ e class name ]) ].
+	(isError not and: [ aTool answersStructuredContent: result ]) ifTrue: [
+		^ self
+			toolResult: (self truncated: (NeoJSONWriter toStringPretty: result))
+			structured: result
+			id: id ].
+	result isString ifFalse: [ result := result printString ].
+	^ self toolResult: (self truncated: result) isError: isError id: id
 ]
 
 { #category : 'response building' }

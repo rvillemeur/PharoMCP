@@ -46,8 +46,10 @@ MCPPharoToolsTest >> testListMethodsOnUnknownClassSaysSo [
 	| listMethods |
 	listMethods := MCPPharoTools listMethodsTool.
 	self
-		assert: (listMethods call: (Dictionary new at: 'className' put: 'NoSuchClassHere'; yourself))
-		equals: 'Error: class not found: NoSuchClassHere'
+		should: [ listMethods call: (Dictionary new at: 'className' put: 'NoSuchClassHere'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: e messageText equals: 'class not found: NoSuchClassHere' ]
 ]
 
 { #category : 'tests - MCPTestResult' }
@@ -83,39 +85,52 @@ MCPPharoToolsTest >> testRunTestsAllInClass [
 
 { #category : 'tests - run_tests' }
 MCPPharoToolsTest >> testRunTestsErrorOnMissingArgs [
-	self assert: ((tool call: Dictionary new) beginsWith: 'Error')
+
+	self
+		should: [ tool call: Dictionary new ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'provide class_name or package') ]
 ]
 
 { #category : 'tests - run_tests' }
 MCPPharoToolsTest >> testRunTestsErrorOnNonTestClass [
-	| result |
-	result := tool call: (Dictionary new at: 'class_name' put: 'OrderedCollection'; yourself).
-	self assert: (result includesSubstring: 'Error').
-	self assert: (result includesSubstring: 'TestCase')
+
+	self
+		should: [ tool call: (Dictionary new at: 'class_name' put: 'OrderedCollection'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'TestCase') ]
 ]
 
 { #category : 'tests - run_tests' }
 MCPPharoToolsTest >> testRunTestsErrorOnUnknownClass [
-	| result |
-	result := tool call: (Dictionary new at: 'class_name' put: 'NoSuchClassXYZ'; yourself).
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ tool call: (Dictionary new at: 'class_name' put: 'NoSuchClassXYZ'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - run_tests' }
 MCPPharoToolsTest >> testRunTestsErrorOnUnknownPackage [
-	| result |
-	result := tool call: (Dictionary new at: 'package' put: 'NoSuchPackageXYZ'; yourself).
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchPackageXYZ')
+
+	self
+		should: [ tool call: (Dictionary new at: 'package' put: 'NoSuchPackageXYZ'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchPackageXYZ') ]
 ]
 
 { #category : 'tests - run_tests' }
 MCPPharoToolsTest >> testRunTestsPackageNotFound [
-	| result |
-	result := tool call: (Dictionary new at: 'package' put: 'NoSuchPackageXYZ'; yourself).
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchPackageXYZ')
+
+	self
+		should: [ tool call: (Dictionary new at: 'package' put: 'NoSuchPackageXYZ'; yourself) ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchPackageXYZ') ]
 ]
 
 { #category : 'tests' }

@@ -13,6 +13,24 @@ Class {
 }
 
 { #category : 'helpers' }
+MCPRequestProcessorTest >> assertToolError: aToolName with: anArgumentDictionary [
+
+	"A failing tool call must answer isError true. A text that says Error with the flag unset
+	 reads as a success to the model that called the tool."
+
+	| real response result |
+	real := MCPRequestProcessor new.
+	MCPPharoTools registerToolsWith: real.
+	response := real processRawRequest: (self request: 'tools/call' id: 11 params: (Dictionary new
+		at: 'name' put: aToolName;
+		at: 'arguments' put: anArgumentDictionary;
+		yourself)).
+	result := (self parse: response) at: 'result'.
+	self assert: (result at: 'isError') description: aToolName , ' answered isError false'.
+	^ ((result at: 'content') first at: 'text')
+]
+
+{ #category : 'helpers' }
 MCPRequestProcessorTest >> completionFor: aReference argument: aName value: aValue [
 
 	| params response |
@@ -158,6 +176,29 @@ MCPRequestProcessorTest >> testCompletionOfUnknownReferenceIsEmpty [
 	self assert: (completion at: 'values') isEmpty.
 	self assert: (completion at: 'total') equals: 0.
 	self deny: (completion at: 'hasMore')
+]
+
+{ #category : 'tests - tools' }
+MCPRequestProcessorTest >> testEveryToolSaysSoWhenItFails [
+
+	| missing |
+	missing := 'NoSuchClassXYZ'.
+	{ 'class_definition' -> (Dictionary new at: 'className' put: missing; yourself).
+	'class_hierarchy' -> (Dictionary new at: 'class_name' put: missing; yourself).
+	'class_comment' -> (Dictionary new at: 'class_name' put: missing; yourself).
+	'list_methods' -> (Dictionary new at: 'className' put: missing; yourself).
+	'method_source' -> (Dictionary new at: 'className' put: missing; at: 'methodName' put: 'foo'; yourself).
+	'class_remove' -> (Dictionary new at: 'class_name' put: missing; yourself).
+	'class_rename' -> (Dictionary new at: 'old_name' put: missing; at: 'new_name' put: 'AnyName'; yourself).
+	'delete_method' -> (Dictionary new at: 'class_name' put: missing; at: 'selector' put: 'foo'; yourself).
+	'run_tests' -> (Dictionary new at: 'class_name' put: missing; yourself).
+	'run_critics' -> (Dictionary new at: 'class_name' put: missing; yourself).
+	'search_source' -> (Dictionary new at: 'pattern' put: 'foo'; at: 'class_name' put: missing; yourself).
+	'package_remove' -> (Dictionary new at: 'package' put: 'NoSuchPackageXYZ'; yourself) }
+		do: [ :each |
+			| text |
+			text := self assertToolError: each key with: each value.
+			self assert: (text beginsWith: 'Error') description: each key , ' answered ' , text ]
 ]
 
 { #category : 'tests - initialize' }

@@ -52,10 +52,12 @@ MCPPharoToolsRunningTest >> testClassHierarchyOfShowsSubclasses [
 
 { #category : 'tests - classHierarchy' }
 MCPPharoToolsRunningTest >> testClassHierarchyOfUnknown [
-	| r |
-	r := MCPPharoTools classHierarchyOf: 'NoSuchClassXYZ'.
-	self assert: (r beginsWith: 'Error').
-	self assert: (r includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools classHierarchyOf: 'NoSuchClassXYZ' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - classHierarchy' }
@@ -127,12 +129,16 @@ MCPPharoToolsRunningTest >> testCompileMethodSuccess [
 
 { #category : 'tests - compileMethod' }
 MCPPharoToolsRunningTest >> testCompileMethodSyntaxError [
-	| result |
-	result := MCPPharoTools compileMethod: 'this is not valid smalltalk !!!'
-		onClass: 'MCPPharoToolsRunningTest'
-		side: 'instance'
-		classified: 'private'.
-	self assert: (result beginsWith: 'Error')
+
+	self
+		should: [ MCPPharoTools
+			compileMethod: 'this is not valid smalltalk !!!'
+			onClass: 'MCPPharoToolsRunningTest'
+			side: 'instance'
+			classified: 'private' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'compilation failed') ]
 ]
 
 { #category : 'tests - compileMethod' }
@@ -159,25 +165,30 @@ MCPPharoToolsRunningTest >> testCompileMethodToolSchemaRequiresClassAndSource [
 
 { #category : 'tests - compileMethod' }
 MCPPharoToolsRunningTest >> testCompileMethodUnknownClass [
-	| result |
-	result := MCPPharoTools compileMethod: 'foo ^ 1'
-		onClass: 'NoSuchClassXYZ'
-		side: 'instance'
-		classified: 'private'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools
+			compileMethod: 'foo ^ 1'
+			onClass: 'NoSuchClassXYZ'
+			side: 'instance'
+			classified: 'private' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - createClass' }
 MCPPharoToolsRunningTest >> testCreateClassAlreadyExists [
-	| result |
-	result := MCPPharoTools
-		createClass: 'Object'
-		superclass: 'Object'
-		instanceVariables: #()
-		package: 'PharoMCP-Tests'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'already exists')
+
+	self
+		should: [ MCPPharoTools
+			createClass: 'Object'
+			superclass: 'Object'
+			instanceVariables: #()
+			package: 'PharoMCP-Tests' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'already exists') ]
 ]
 
 { #category : 'tests - createClass' }
@@ -232,22 +243,26 @@ MCPPharoToolsRunningTest >> testCreateClassToolInAllTools [
 
 { #category : 'tests - createClass' }
 MCPPharoToolsRunningTest >> testCreateClassUnknownSuperclass [
-	| result |
-	result := MCPPharoTools
-		createClass: 'MCPTestTempClassBBB'
-		superclass: 'NoSuchSuperclassXYZ'
-		instanceVariables: #()
-		package: 'PharoMCP-Tests'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchSuperclassXYZ')
+
+	self
+		should: [ MCPPharoTools
+			createClass: 'MCPTestTempClassBBB'
+			superclass: 'NoSuchSuperclassXYZ'
+			instanceVariables: #()
+			package: 'PharoMCP-Tests' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchSuperclassXYZ') ]
 ]
 
 { #category : 'tests - createPackage' }
 MCPPharoToolsRunningTest >> testCreatePackageAlreadyExists [
-	| result |
-	result := MCPPharoTools createPackage: 'PharoMCP'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'already exists')
+
+	self
+		should: [ MCPPharoTools createPackage: 'PharoMCP' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'already exists') ]
 ]
 
 { #category : 'tests - createPackage' }
@@ -299,25 +314,32 @@ MCPPharoToolsRunningTest >> testDeleteMethodToolInAllTools [
 
 { #category : 'tests - deleteMethod' }
 MCPPharoToolsRunningTest >> testDeleteMethodUnknownClass [
-	| result |
-	result := MCPPharoTools deleteMethod: 'foo' fromClass: 'NoSuchClassXYZ' side: 'instance'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools deleteMethod: 'foo' fromClass: 'NoSuchClassXYZ' side: 'instance' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - deleteMethod' }
 MCPPharoToolsRunningTest >> testDeleteMethodUnknownSelector [
-	| result |
-	result := MCPPharoTools deleteMethod: 'noSuchSelectorXYZ' fromClass: 'MCPPharoToolsRunningTest' side: 'instance'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'noSuchSelectorXYZ')
+
+	self
+		should: [ MCPPharoTools deleteMethod: 'noSuchSelectorXYZ' fromClass: 'MCPPharoToolsRunningTest' side: 'instance' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'noSuchSelectorXYZ') ]
 ]
 
 { #category : 'tests - findImplementors' }
 MCPPharoToolsRunningTest >> testFindImplementorsOfEmptySelector [
-	| r |
-	r := MCPPharoTools findImplementorsOf: ''.
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ MCPPharoTools findImplementorsOf: '' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'selector is required') ]
 ]
 
 { #category : 'tests - findImplementors' }
@@ -337,9 +359,12 @@ MCPPharoToolsRunningTest >> testFindImplementorsOfValidSelector [
 
 { #category : 'tests - findSenders' }
 MCPPharoToolsRunningTest >> testFindSendersOfEmptySelector [
-	| r |
-	r := MCPPharoTools findSendersOf: ''.
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ MCPPharoTools findSendersOf: '' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'selector is required') ]
 ]
 
 { #category : 'tests - findSenders' }
@@ -404,10 +429,12 @@ MCPPharoToolsRunningTest >> testGetClassCommentReturnsComment [
 
 { #category : 'tests - classComment' }
 MCPPharoToolsRunningTest >> testGetClassCommentUnknownClass [
-	| r |
-	r := MCPPharoTools getClassComment: 'NoSuchClassXYZ'.
-	self assert: (r beginsWith: 'Error').
-	self assert: (r includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools getClassComment: 'NoSuchClassXYZ' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - listMethods' }
@@ -452,16 +479,19 @@ MCPPharoToolsRunningTest >> testListMethodsToolHasCorrectName [
 
 { #category : 'tests - moveMethod' }
 MCPPharoToolsRunningTest >> testMoveMethodConflict [
-	| srcCls tgtCls result |
+
+	| srcCls tgtCls |
 	MCPPharoTools createClass: 'MCPTestMoveConflictSrc' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
 	MCPPharoTools createClass: 'MCPTestMoveConflictTgt' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
 	srcCls := Smalltalk globals at: #MCPTestMoveConflictSrc.
 	tgtCls := Smalltalk globals at: #MCPTestMoveConflictTgt.
 	[ srcCls compile: 'sharedSel ^ 1' classified: 'private'.
 	tgtCls compile: 'sharedSel ^ 2' classified: 'private'.
-	result := MCPPharoTools moveMethod: 'sharedSel' fromClass: 'MCPTestMoveConflictSrc' side: 'instance' toClass: 'MCPTestMoveConflictTgt'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'already defined') ]
+	self
+		should: [ MCPPharoTools moveMethod: 'sharedSel' fromClass: 'MCPTestMoveConflictSrc' side: 'instance' toClass: 'MCPTestMoveConflictTgt' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'already defined') ] ]
 	ensure: [
 		(Smalltalk globals includesKey: #MCPTestMoveConflictSrc) ifTrue: [ (Smalltalk globals at: #MCPTestMoveConflictSrc) removeFromSystem ].
 		(Smalltalk globals includesKey: #MCPTestMoveConflictTgt) ifTrue: [ (Smalltalk globals at: #MCPTestMoveConflictTgt) removeFromSystem ] ]
@@ -492,10 +522,12 @@ MCPPharoToolsRunningTest >> testMoveMethodToolInAllTools [
 
 { #category : 'tests - moveMethod' }
 MCPPharoToolsRunningTest >> testMoveMethodUnknownSource [
-	| result |
-	result := MCPPharoTools moveMethod: 'foo' fromClass: 'NoSuchClassXYZ' side: 'instance' toClass: 'MCPTool'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools moveMethod: 'foo' fromClass: 'NoSuchClassXYZ' side: 'instance' toClass: 'MCPTool' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - removeClass' }
@@ -516,22 +548,27 @@ MCPPharoToolsRunningTest >> testRemoveClassToolInAllTools [
 
 { #category : 'tests - removeClass' }
 MCPPharoToolsRunningTest >> testRemoveClassUnknown [
-	| result |
-	result := MCPPharoTools removeClass: 'NoSuchClassXYZ'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools removeClass: 'NoSuchClassXYZ' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - removeClass' }
 MCPPharoToolsRunningTest >> testRemoveClassWithSubclassesFails [
-	| parent child result |
+
+	| parent child |
 	parent := 'MCPTestTempParentEEE'.
 	child := 'MCPTestTempChildEEE'.
 	[ MCPPharoTools createClass: parent superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
 	MCPPharoTools createClass: child superclass: parent instanceVariables: #() package: 'PharoMCP-Tests'.
-	result := MCPPharoTools removeClass: parent.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'subclass') ]
+	self
+		should: [ MCPPharoTools removeClass: parent ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'subclass') ] ]
 	ensure: [
 		(Smalltalk globals includesKey: child asSymbol) ifTrue: [ (Smalltalk globals at: child asSymbol) removeFromSystem ].
 		(Smalltalk globals includesKey: parent asSymbol) ifTrue: [ (Smalltalk globals at: parent asSymbol) removeFromSystem ] ]
@@ -539,10 +576,12 @@ MCPPharoToolsRunningTest >> testRemoveClassWithSubclassesFails [
 
 { #category : 'tests - removePackage' }
 MCPPharoToolsRunningTest >> testRemovePackageNotEmpty [
-	| result |
-	result := MCPPharoTools removePackage: 'PharoMCP'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'not empty')
+
+	self
+		should: [ MCPPharoTools removePackage: 'PharoMCP' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'not empty') ]
 ]
 
 { #category : 'tests - removePackage' }
@@ -561,18 +600,22 @@ MCPPharoToolsRunningTest >> testRemovePackageToolInAllTools [
 
 { #category : 'tests - removePackage' }
 MCPPharoToolsRunningTest >> testRemovePackageUnknown [
-	| result |
-	result := MCPPharoTools removePackage: 'NoSuchPkgXYZ'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchPkgXYZ')
+
+	self
+		should: [ MCPPharoTools removePackage: 'NoSuchPkgXYZ' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchPkgXYZ') ]
 ]
 
 { #category : 'tests - renameClass' }
 MCPPharoToolsRunningTest >> testRenameClassConflict [
-	| result |
-	result := MCPPharoTools renameClass: 'MCPServer' to: 'MCPTool'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'already exists')
+
+	self
+		should: [ MCPPharoTools renameClass: 'MCPServer' to: 'MCPTool' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'already exists') ]
 ]
 
 { #category : 'tests - renameClass' }
@@ -596,10 +639,12 @@ MCPPharoToolsRunningTest >> testRenameClassToolInAllTools [
 
 { #category : 'tests - renameClass' }
 MCPPharoToolsRunningTest >> testRenameClassUnknown [
-	| result |
-	result := MCPPharoTools renameClass: 'NoSuchClassXYZ' to: 'AnyName'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools renameClass: 'NoSuchClassXYZ' to: 'AnyName' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - renameMethod' }
@@ -625,18 +670,22 @@ MCPPharoToolsRunningTest >> testRenameMethodToolInAllTools [
 
 { #category : 'tests - renameMethod' }
 MCPPharoToolsRunningTest >> testRenameMethodUnknownClass [
-	| result |
-	result := MCPPharoTools renameMethod: 'foo' onClass: 'NoSuchClassXYZ' side: 'instance' to: 'bar'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools renameMethod: 'foo' onClass: 'NoSuchClassXYZ' side: 'instance' to: 'bar' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - renameMethod' }
 MCPPharoToolsRunningTest >> testRenameMethodUnknownSelector [
-	| result |
-	result := MCPPharoTools renameMethod: 'noSuchSelectorXYZ' onClass: 'MCPPharoToolsRunningTest' side: 'instance' to: 'bar'.
-	self assert: (result beginsWith: 'Error').
-	self assert: (result includesSubstring: 'noSuchSelectorXYZ')
+
+	self
+		should: [ MCPPharoTools renameMethod: 'noSuchSelectorXYZ' onClass: 'MCPPharoToolsRunningTest' side: 'instance' to: 'bar' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'noSuchSelectorXYZ') ]
 ]
 
 { #category : 'tests - structured results' }
@@ -665,10 +714,12 @@ MCPPharoToolsRunningTest >> testRunCriticsAnswersStructuredContent [
 
 { #category : 'tests - runCritics' }
 MCPPharoToolsRunningTest >> testRunCriticsOnClassUnknown [
-	| r |
-	r := MCPPharoTools runCriticsOnClass: 'NoSuchClassXYZ'.
-	self assert: (r beginsWith: 'Error').
-	self assert: (r includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools runCriticsOnClass: 'NoSuchClassXYZ' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - running' }
@@ -682,10 +733,12 @@ MCPPharoToolsRunningTest >> testRunCriticsOnClassValid [
 
 { #category : 'tests - runCritics' }
 MCPPharoToolsRunningTest >> testRunCriticsOnPackageUnknown [
-	| r |
-	r := MCPPharoTools runCriticsOnPackage: 'NoSuchPkgXYZ'.
-	self assert: (r beginsWith: 'Error').
-	self assert: (r includesSubstring: 'NoSuchPkgXYZ')
+
+	self
+		should: [ MCPPharoTools runCriticsOnPackage: 'NoSuchPkgXYZ' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchPkgXYZ') ]
 ]
 
 { #category : 'tests - structured results' }
@@ -723,10 +776,12 @@ MCPPharoToolsRunningTest >> testRunTestsForClassIncludesDuration [
 
 { #category : 'tests - runTests' }
 MCPPharoToolsRunningTest >> testRunTestsForClassNonTestCase [
-	| r |
-	r := MCPPharoTools runTestsForClass: 'OrderedCollection' selector: nil.
-	self assert: (r beginsWith: 'Error').
-	self assert: (r includesSubstring: 'OrderedCollection')
+
+	self
+		should: [ MCPPharoTools runTestsForClass: 'OrderedCollection' selector: nil ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'OrderedCollection') ]
 ]
 
 { #category : 'tests - running' }
@@ -742,10 +797,12 @@ MCPPharoToolsRunningTest >> testRunTestsForClassSingleSelector [
 
 { #category : 'tests - runTests' }
 MCPPharoToolsRunningTest >> testRunTestsForClassUnknownClass [
-	| r |
-	r := MCPPharoTools runTestsForClass: 'NoSuchClassXYZ' selector: nil.
-	self assert: (r beginsWith: 'Error').
-	self assert: (r includesSubstring: 'NoSuchClassXYZ')
+
+	self
+		should: [ MCPPharoTools runTestsForClass: 'NoSuchClassXYZ' selector: nil ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - running' }
@@ -759,9 +816,12 @@ MCPPharoToolsRunningTest >> testRunTestsInPackageIncludesDuration [
 
 { #category : 'tests - runTests' }
 MCPPharoToolsRunningTest >> testRunTestsInPackageNoTestCases [
-	| r |
-	r := MCPPharoTools runTestsInPackage: 'PharoMCP'.
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ MCPPharoTools runTestsInPackage: 'PharoMCP' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'no TestCase subclasses') ]
 ]
 
 { #category : 'tests - running' }
@@ -775,10 +835,12 @@ MCPPharoToolsRunningTest >> testRunTestsInPackageSuccess [
 
 { #category : 'tests - runTests' }
 MCPPharoToolsRunningTest >> testRunTestsInPackageUnknown [
-	| r |
-	r := MCPPharoTools runTestsInPackage: 'NoSuchPkgXYZ'.
-	self assert: (r beginsWith: 'Error').
-	self assert: (r includesSubstring: 'NoSuchPkgXYZ')
+
+	self
+		should: [ MCPPharoTools runTestsInPackage: 'NoSuchPkgXYZ' ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchPkgXYZ') ]
 ]
 
 { #category : 'tests - searchSource' }
@@ -804,9 +866,12 @@ MCPPharoToolsRunningTest >> testSearchSourceInClassNoMatch [
 
 { #category : 'tests - searchSource' }
 MCPPharoToolsRunningTest >> testSearchSourceInClassUnknown [
-	| r |
-	r := MCPPharoTools searchSourceFor: 'foo' inClass: 'NoSuchClassXYZ' caseSensitive: false.
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ MCPPharoTools searchSourceFor: 'foo' inClass: 'NoSuchClassXYZ' caseSensitive: false ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
 { #category : 'tests - searchSource' }
@@ -819,9 +884,12 @@ MCPPharoToolsRunningTest >> testSearchSourceInPackageFindsMatch [
 
 { #category : 'tests - searchSource' }
 MCPPharoToolsRunningTest >> testSearchSourceInPackageUnknown [
-	| r |
-	r := MCPPharoTools searchSourceFor: 'foo' inPackage: 'NoSuchPkgXYZ' caseSensitive: false.
-	self assert: (r beginsWith: 'Error')
+
+	self
+		should: [ MCPPharoTools searchSourceFor: 'foo' inPackage: 'NoSuchPkgXYZ' caseSensitive: false ]
+		raise: MCPToolError
+		withExceptionDo: [ :e |
+			self assert: (e messageText includesSubstring: 'NoSuchPkgXYZ') ]
 ]
 
 { #category : 'tests - searchSource' }

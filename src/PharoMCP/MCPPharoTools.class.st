@@ -64,8 +64,9 @@ MCPPharoTools class >> classCommentTool [
 		yourself
 ]
 
-{ #category : 'tools - classes' }
+{ #category : 'tools' }
 MCPPharoTools class >> classDefinitionTool [
+
 	^ (MCPTool
 		name: 'class_definition'
 		description: 'Get the definition of a Pharo class including its superclass, instance variables, and package.'
@@ -85,16 +86,18 @@ MCPPharoTools class >> classDefinitionTool [
 			Smalltalk globals
 				at: className asSymbol
 				ifPresent: [ :class | class definitionString ]
-				ifAbsent: [ 'Error: class not found: ' , className ] ])
+				ifAbsent: [ MCPToolError signal: 'class not found: ' , className ] ])
 		title: 'Show a class definition';
 		readOnly;
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'browsing' }
 MCPPharoTools class >> classHierarchyOf: className [
+
 	| cls superchain subs |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	superchain := cls allSuperclasses reversed.
 	subs := cls subclasses asSortedCollection: [ :a :b | a name < b name ].
 	^ String streamContents: [ :s |
@@ -143,17 +146,19 @@ MCPPharoTools class >> collectCritiquesForClass: aClass [
 	^ critiques
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> compileMethod: source onClass: className side: side classified: protocol [
+
 	| cls target normalizedSource selector |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	target := side = 'class' ifTrue: [ cls class ] ifFalse: [ cls ].
 	normalizedSource := source
 		copyReplaceAll: (String with: Character lf)
 		with: (String with: Character cr).
 	selector := [ target compile: normalizedSource classified: protocol asSymbol ]
 		on: Error
-		do: [ :e | ^ 'Error: compilation failed: ' , e messageText ].
+		do: [ :e | MCPToolError signal: 'compilation failed: ' , e messageText ].
 	^ 'Compiled: ' , className
 		, (side = 'class' ifTrue: [ ' class' ] ifFalse: [ '' ])
 		, ' >> #' , selector
@@ -201,19 +206,20 @@ MCPPharoTools class >> compileMethodTool [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> createClass: className superclass: superclsName instanceVariables: instVarNames package: packageName [
+
 	| supercls slots |
 	(Smalltalk globals includesKey: className asSymbol) ifTrue: [
-		^ 'Error: class already exists: ' , className ].
-	supercls := Smalltalk globals at: superclsName asSymbol
-		ifAbsent: [ ^ 'Error: superclass not found: ' , superclsName ].
+		MCPToolError signal: 'class already exists: ' , className ].
+	supercls := Smalltalk globals at: superclsName asSymbol ifAbsent: [
+		MCPToolError signal: 'superclass not found: ' , superclsName ].
 	slots := (instVarNames ifNil: [ #() ]) collect: [ :n | n asSymbol ].
 	[ (supercls << className asSymbol
 		slots: slots;
 		package: packageName) install ]
 		on: Error
-		do: [ :e | ^ 'Error: class creation failed: ' , e messageText ].
+		do: [ :e | MCPToolError signal: 'class creation failed: ' , e messageText ].
 	^ 'Created: ' , className
 		, ' (subclass of ' , superclsName
 		, ', ' , slots size printString , ' instance variable'
@@ -264,10 +270,11 @@ MCPPharoTools class >> createClassTool [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> createPackage: packageName [
+
 	(Smalltalk packageOrganizer hasPackage: packageName) ifTrue: [
-		^ 'Error: package already exists: ' , packageName ].
+		MCPToolError signal: 'package already exists: ' , packageName ].
 	Smalltalk packageOrganizer ensurePackage: packageName.
 	^ 'Created package: ' , packageName
 ]
@@ -357,13 +364,15 @@ MCPPharoTools class >> critiqueReportSchema [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> deleteMethod: selector fromClass: className side: side [
+
 	| cls target |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	target := side = 'class' ifTrue: [ cls class ] ifFalse: [ cls ].
 	(target includesSelector: selector asSymbol) ifFalse: [
-		^ 'Error: method not found: ' , selector , ' in ' , className ].
+		MCPToolError signal: 'method not found: ' , selector , ' in ' , className ].
 	target removeSelector: selector asSymbol.
 	^ 'Deleted: ' , className
 		, (side = 'class' ifTrue: [ ' class' ] ifFalse: [ '' ])
@@ -407,8 +416,9 @@ MCPPharoTools class >> deleteMethodTool [
 		yourself
 ]
 
-{ #category : 'tools - evaluation' }
+{ #category : 'tools' }
 MCPPharoTools class >> evaluateTool [
+
 	^ (MCPTool
 		name: 'evaluate_pharo'
 		description: 'Evaluate Pharo Smalltalk code and return the result as a string. Supports any valid Pharo expression or sequence of statements.'
@@ -423,18 +433,19 @@ MCPPharoTools class >> evaluateTool [
 			at: 'required' put: #('code');
 			yourself)
 		handler: [ :args |
-			[ (OpalCompiler new evaluate: (args at: 'code')) printString ]
-				on: Error
-				do: [ :e | 'Error: ' , e messageText ] ])
+			"No handler here: the request processor catches the error and marks the
+			 tool result as a failure, which a handler returning a string cannot do."
+			(OpalCompiler new evaluate: (args at: 'code')) printString ])
 		title: 'Evaluate Pharo code';
 		destructive;
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'browsing' }
 MCPPharoTools class >> findImplementorsOf: selector [
+
 	| results names |
-	selector isEmpty ifTrue: [ ^ 'Error: selector is required' ].
+	selector isEmpty ifTrue: [ MCPToolError signal: 'selector is required' ].
 	results := SystemNavigation default allImplementorsOf: selector asSymbol.
 	results isEmpty ifTrue: [ ^ 'No implementors found for: #' , selector ].
 	names := (results collect: [ :m | m methodClass name ]) asSortedCollection.
@@ -465,10 +476,11 @@ MCPPharoTools class >> findImplementorsTool [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'browsing' }
 MCPPharoTools class >> findSendersOf: selector [
+
 	| results sorted limited |
-	selector isEmpty ifTrue: [ ^ 'Error: selector is required' ].
+	selector isEmpty ifTrue: [ MCPToolError signal: 'selector is required' ].
 	results := SystemNavigation default allSendersOf: selector asSymbol.
 	results isEmpty ifTrue: [ ^ 'No senders found for: #' , selector ].
 	sorted := (results collect: [ :m | m methodClass name , ' >> #' , m selector ]) asSortedCollection.
@@ -555,10 +567,12 @@ MCPPharoTools class >> formatResult: result forName: targetName selector: select
 				s << sel; nextPut: Character lf; << msg; nextPut: Character lf; nextPut: Character lf ] ] ]
 ]
 
-{ #category : 'running' }
+{ #category : 'browsing' }
 MCPPharoTools class >> getClassComment: className [
+
 	| cls |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	cls comment isEmpty ifTrue: [ ^ '(no comment)' ].
 	^ cls comment
 ]
@@ -638,8 +652,9 @@ MCPPharoTools class >> listClassesTool [
 		yourself
 ]
 
-{ #category : 'tools - methods' }
+{ #category : 'tools' }
 MCPPharoTools class >> listMethodsTool [
+
 	^ (MCPTool
 		name: 'list_methods'
 		description: 'List all methods defined on a class with their protocol. Use side "class" for class-side methods.'
@@ -661,23 +676,21 @@ MCPPharoTools class >> listMethodsTool [
 		handler: [ :args |
 			| className cls target methods |
 			className := args at: 'className'.
-			cls := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
-			cls
-				ifNil: [ 'Error: class not found: ' , className ]
-				ifNotNil: [
-					target := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
-						ifTrue: [ cls class ]
-						ifFalse: [ cls ].
-					methods := target methods asSortedCollection: [ :a :b |
-						a protocol name < b protocol name or: [
-						a protocol name = b protocol name and: [
-						a selector < b selector ] ] ].
-					methods isEmpty
-						ifTrue: [ 'No methods defined on ' , className ]
-						ifFalse: [
-							String streamContents: [ :s |
-								methods do: [ :m |
-									s << m protocol name; << ' | '; << m selector; nextPut: Character lf ] ] ] ] ])
+			cls := Smalltalk globals at: className asSymbol ifAbsent: [
+				MCPToolError signal: 'class not found: ' , className ].
+			target := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
+				ifTrue: [ cls class ]
+				ifFalse: [ cls ].
+			methods := target methods asSortedCollection: [ :a :b |
+				a protocol name < b protocol name or: [
+				a protocol name = b protocol name and: [
+				a selector < b selector ] ] ].
+			methods isEmpty
+				ifTrue: [ 'No methods defined on ' , className ]
+				ifFalse: [
+					String streamContents: [ :s |
+						methods do: [ :m |
+							s << m protocol name; << ' | '; << m selector; nextPut: Character lf ] ] ] ])
 		title: 'List the methods of a class';
 		readOnly;
 		yourself
@@ -753,8 +766,9 @@ MCPPharoTools class >> messageDictionariesFrom: aDictionary [
 			yourself ]
 ]
 
-{ #category : 'tools - methods' }
+{ #category : 'tools' }
 MCPPharoTools class >> methodSourceTool [
+
 	^ (MCPTool
 		name: 'method_source'
 		description: 'Get the source code of a method. Use side "class" for class-side methods, "instance" for instance-side methods.'
@@ -781,33 +795,35 @@ MCPPharoTools class >> methodSourceTool [
 			| className methodName class target |
 			className := args at: 'className'.
 			methodName := args at: 'methodName'.
-			class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
-			class
-				ifNil: [ 'Error: class not found: ' , className ]
-				ifNotNil: [
-					target := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
-						ifTrue: [ class class ]
-						ifFalse: [ class ].
-					target methodDictionary
-						at: methodName asSymbol
-						ifPresent: [ :method | method sourceCode ]
-						ifAbsent: [ 'Error: method not found: ' , methodName , ' in ' , target name ] ] ])
+			class := Smalltalk globals at: className asSymbol ifAbsent: [
+				MCPToolError signal: 'class not found: ' , className ].
+			target := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
+				ifTrue: [ class class ]
+				ifFalse: [ class ].
+			target methodDictionary
+				at: methodName asSymbol
+				ifPresent: [ :method | method sourceCode ]
+				ifAbsent: [
+					MCPToolError signal: 'method not found: ' , methodName , ' in ' , target name ] ])
 		title: 'Show method source';
 		readOnly;
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> moveMethod: selector fromClass: sourceClassName side: side toClass: targetClassName [
+
 	| srcCls tgtCls srcTarget tgtTarget method protocol normalizedSource |
-	srcCls := Smalltalk globals at: sourceClassName asSymbol ifAbsent: [ ^ 'Error: source class not found: ' , sourceClassName ].
-	tgtCls := Smalltalk globals at: targetClassName asSymbol ifAbsent: [ ^ 'Error: target class not found: ' , targetClassName ].
+	srcCls := Smalltalk globals at: sourceClassName asSymbol ifAbsent: [
+		MCPToolError signal: 'source class not found: ' , sourceClassName ].
+	tgtCls := Smalltalk globals at: targetClassName asSymbol ifAbsent: [
+		MCPToolError signal: 'target class not found: ' , targetClassName ].
 	srcTarget := side = 'class' ifTrue: [ srcCls class ] ifFalse: [ srcCls ].
 	tgtTarget := side = 'class' ifTrue: [ tgtCls class ] ifFalse: [ tgtCls ].
 	(srcTarget includesSelector: selector asSymbol) ifFalse: [
-		^ 'Error: method not found: ' , selector , ' in ' , sourceClassName ].
+		MCPToolError signal: 'method not found: ' , selector , ' in ' , sourceClassName ].
 	(tgtTarget includesSelector: selector asSymbol) ifTrue: [
-		^ 'Error: selector already defined in target: ' , selector , ' in ' , targetClassName ].
+		MCPToolError signal: 'selector already defined in target: ' , selector , ' in ' , targetClassName ].
 	method := srcTarget methodDictionary at: selector asSymbol.
 	protocol := method protocol name.
 	normalizedSource := method sourceCode
@@ -815,11 +831,11 @@ MCPPharoTools class >> moveMethod: selector fromClass: sourceClassName side: sid
 		with: (String with: Character cr).
 	[ tgtTarget compile: normalizedSource classified: protocol asSymbol ]
 		on: Error
-		do: [ :e | ^ 'Error: compile failed on target: ' , e messageText ].
+		do: [ :e | MCPToolError signal: 'compile failed on target: ' , e messageText ].
 	srcTarget removeSelector: selector asSymbol.
 	^ 'Moved: ' , sourceClassName
 		, (side = 'class' ifTrue: [ ' class' ] ifFalse: [ '' ])
-		, ' >> #' , selector , ' → ' , targetClassName
+		, ' >> #' , selector , ' to ' , targetClassName
 ]
 
 { #category : 'tools' }
@@ -870,12 +886,14 @@ MCPPharoTools class >> registerToolsWith: aProcessor [
 	self allTools do: [ :tool | aProcessor registerTool: tool ]
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> removeClass: className [
+
 	| cls |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	cls subclasses isEmpty ifFalse: [
-		^ 'Error: class has subclasses: ' , ((cls subclasses collect: [ :c | c name ]) joinUsing: ', ') ].
+		MCPToolError signal: 'class has subclasses: ' , ((cls subclasses collect: [ :c | c name ]) joinUsing: ', ') ].
 	cls removeFromSystem.
 	^ 'Removed: ' , className
 ]
@@ -905,12 +923,14 @@ MCPPharoTools class >> removeClassTool [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> removePackage: packageName [
+
 	| pkg |
-	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [
+		MCPToolError signal: 'package not found: ' , packageName ].
 	pkg classes isEmpty ifFalse: [
-		^ 'Error: package not empty (' , pkg classes size printString , ' classes). Remove or move classes first.' ].
+		MCPToolError signal: 'package not empty (' , pkg classes size printString , ' classes). Remove or move classes first.' ].
 	Smalltalk packageOrganizer removePackage: pkg.
 	^ 'Removed package: ' , packageName
 ]
@@ -940,15 +960,16 @@ MCPPharoTools class >> removePackageTool [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> renameClass: oldName to: newName [
+
 	(Smalltalk globals includesKey: oldName asSymbol) ifFalse: [
-		^ 'Error: class not found: ' , oldName ].
+		MCPToolError signal: 'class not found: ' , oldName ].
 	(Smalltalk globals includesKey: newName asSymbol) ifTrue: [
-		^ 'Error: class already exists: ' , newName ].
+		MCPToolError signal: 'class already exists: ' , newName ].
 	[ (RBRenameClassChange rename: oldName to: newName) execute ]
 		on: Error
-		do: [ :e | ^ 'Error: rename failed: ' , e messageText ].
+		do: [ :e | MCPToolError signal: 'rename failed: ' , e messageText ].
 	^ 'Renamed: ' , oldName , ' to ' , newName
 		, '. Use search_source to find references that need updating.'
 ]
@@ -984,24 +1005,25 @@ MCPPharoTools class >> renameClassTool [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> renameMethod: oldSelector onClass: className side: side to: newSelector [
-	| cls target permutation oldMethod protocol newSource |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+
+	| cls target oldMethod protocol newSource |
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	target := side = 'class' ifTrue: [ cls class ] ifFalse: [ cls ].
 	(target includesSelector: oldSelector asSymbol) ifFalse: [
-		^ 'Error: method not found: ' , oldSelector , ' in ' , className ].
+		MCPToolError signal: 'method not found: ' , oldSelector , ' in ' , className ].
 	(target includesSelector: newSelector asSymbol) ifTrue: [
-		^ 'Error: selector already exists: ' , newSelector , ' in ' , className ].
+		MCPToolError signal: 'selector already exists: ' , newSelector , ' in ' , className ].
 	oldMethod := target methodDictionary at: oldSelector asSymbol.
 	protocol := oldMethod protocol name.
 	newSource := oldMethod sourceCode
 		copyReplaceAll: oldSelector
 		with: newSelector.
-	permutation := (1 to: oldSelector asSymbol numArgs) asArray.
 	[ target compile: newSource classified: protocol asSymbol ]
 		on: Error
-		do: [ :e | ^ 'Error: recompile failed: ' , e messageText ].
+		do: [ :e | MCPToolError signal: 'recompile failed: ' , e messageText ].
 	target removeSelector: oldSelector asSymbol.
 	^ 'Renamed: ' , className
 		, (side = 'class' ifTrue: [ ' class' ] ifFalse: [ '' ])
@@ -1071,19 +1093,21 @@ MCPPharoTools class >> reportFor: result name: targetName selector: selector dur
 	^ report
 ]
 
-{ #category : 'running' }
+{ #category : 'quality' }
 MCPPharoTools class >> runCriticsOnClass: className [
 
 	| cls |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	^ self critiqueReportFor: (self collectCritiquesForClass: cls) name: className
 ]
 
-{ #category : 'running' }
+{ #category : 'quality' }
 MCPPharoTools class >> runCriticsOnPackage: packageName [
 
 	| pkg critiques |
-	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [
+		MCPToolError signal: 'package not found: ' , packageName ].
 	critiques := OrderedCollection new.
 	pkg classes do: [ :cls | critiques addAll: (self collectCritiquesForClass: cls) ].
 	^ self critiqueReportFor: critiques name: packageName
@@ -1091,6 +1115,7 @@ MCPPharoTools class >> runCriticsOnPackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> runCriticsTool [
+
 	^ (MCPTool
 		name: 'run_critics'
 		description: 'Run Renraku code critics on a class or all classes in a package. Returns rule violations with descriptions.'
@@ -1107,7 +1132,7 @@ MCPPharoTools class >> runCriticsTool [
 			pkg := args at: 'package' ifAbsent: [ nil ].
 			cls := args at: 'class_name' ifAbsent: [ nil ].
 			pkg ifNotNil: [ self runCriticsOnPackage: pkg ]
-			ifNil: [ cls ifNil: [ 'Error: provide class_name or package' ]
+			ifNil: [ cls ifNil: [ MCPToolError signal: 'provide class_name or package' ]
 				ifNotNil: [ self runCriticsOnClass: cls ] ] ])
 		title: 'Run the code critics';
 		outputSchema: self critiqueReportSchema;
@@ -1115,13 +1140,14 @@ MCPPharoTools class >> runCriticsTool [
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'quality' }
 MCPPharoTools class >> runTestsForClass: className selector: selector [
 
 	| cls suite result ms |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	(cls inheritsFrom: TestCase) ifFalse: [
-		^ 'Error: ' , className , ' is not a TestCase subclass' ].
+		MCPToolError signal: className , ' is not a TestCase subclass' ].
 	suite := selector
 		ifNil: [ cls suite ]
 		ifNotNil: [ :sel |
@@ -1133,13 +1159,15 @@ MCPPharoTools class >> runTestsForClass: className selector: selector [
 	^ self reportFor: result name: className selector: selector duration: ms
 ]
 
-{ #category : 'running' }
+{ #category : 'quality' }
 MCPPharoTools class >> runTestsInPackage: packageName [
 
 	| pkg classes suite result ms |
-	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [
+		MCPToolError signal: 'package not found: ' , packageName ].
 	classes := pkg classes select: [ :c | c inheritsFrom: TestCase ].
-	classes isEmpty ifTrue: [ ^ 'Error: no TestCase subclasses in package: ' , packageName ].
+	classes isEmpty ifTrue: [
+		MCPToolError signal: 'no TestCase subclasses in package: ' , packageName ].
 	suite := TestSuite new.
 	classes do: [ :c | c suite tests do: [ :t | suite addTest: t ] ].
 	result := MCPTestResult new.
@@ -1149,6 +1177,7 @@ MCPPharoTools class >> runTestsInPackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> runTestsTool [
+
 	^ (MCPTool
 		name: 'run_tests'
 		description: 'Run a TestCase subclass, a single test method, or all TestCase subclasses in a package. Returns pass/fail/error counts and failure messages.'
@@ -1170,7 +1199,7 @@ MCPPharoTools class >> runTestsTool [
 				ifNotNil: [ self runTestsInPackage: package ]
 				ifNil: [
 					className
-						ifNil: [ 'Error: provide class_name or package' ]
+						ifNil: [ MCPToolError signal: 'provide class_name or package' ]
 						ifNotNil: [ self runTestsForClass: className selector: selector ] ] ])
 		title: 'Run tests';
 		outputSchema: self testReportSchema;
@@ -1219,24 +1248,29 @@ MCPPharoTools class >> searchSource: pattern inMethods: methods caseSensitive: c
 		limited do: [ :m | self writeMatchEntry: m norm: norm to: s ] ]
 ]
 
-{ #category : 'running' }
+{ #category : 'browsing' }
 MCPPharoTools class >> searchSourceFor: pattern inClass: className caseSensitive: caseSensitive [
+
 	| cls methods |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	methods := cls methods , cls class methods.
 	^ self searchSource: pattern inMethods: methods caseSensitive: caseSensitive
 ]
 
-{ #category : 'running' }
+{ #category : 'browsing' }
 MCPPharoTools class >> searchSourceFor: pattern inPackage: packageName caseSensitive: caseSensitive [
+
 	| pkg methods |
-	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
+	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [
+		MCPToolError signal: 'package not found: ' , packageName ].
 	methods := pkg classes flatCollect: [ :cls | cls methods , cls class methods ].
 	^ self searchSource: pattern inMethods: methods caseSensitive: caseSensitive
 ]
 
 { #category : 'tools' }
 MCPPharoTools class >> searchSourceTool [
+
 	^ (MCPTool
 		name: 'search_source'
 		description: 'Search method source code for a text pattern across a class or package. Returns matching method names with the first matching line. Use for finding string literals, comments, or any text that find_implementors/find_senders cannot locate.'
@@ -1264,26 +1298,28 @@ MCPPharoTools class >> searchSourceTool [
 			yourself)
 		handler: [ :args |
 			| pattern className package cs |
-			pattern := args at: 'pattern' ifAbsent: [ nil ].
-			pattern ifNil: [ 'Error: pattern is required' ] ifNotNil: [
-				className := args at: 'class_name' ifAbsent: [ nil ].
-				package := args at: 'package' ifAbsent: [ nil ].
-				cs := args at: 'case_sensitive' ifAbsent: [ false ].
-				package
-					ifNotNil: [ self searchSourceFor: pattern inPackage: package caseSensitive: cs ]
-					ifNil: [
-						className
-							ifNotNil: [ self searchSourceFor: pattern inClass: className caseSensitive: cs ]
-							ifNil: [ 'Error: provide class_name or package' ] ] ] ])
+			pattern := args at: 'pattern' ifAbsent: [
+				MCPToolError signal: 'pattern is required' ].
+			className := args at: 'class_name' ifAbsent: [ nil ].
+			package := args at: 'package' ifAbsent: [ nil ].
+			cs := args at: 'case_sensitive' ifAbsent: [ false ].
+			package
+				ifNotNil: [ self searchSourceFor: pattern inPackage: package caseSensitive: cs ]
+				ifNil: [
+					className
+						ifNotNil: [ self searchSourceFor: pattern inClass: className caseSensitive: cs ]
+						ifNil: [ MCPToolError signal: 'provide class_name or package' ] ] ])
 		title: 'Search method source';
 		readOnly;
 		yourself
 ]
 
-{ #category : 'running' }
+{ #category : 'editing' }
 MCPPharoTools class >> setClassComment: comment onClass: className [
+
 	| cls |
-	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
+	cls := Smalltalk globals at: className asSymbol ifAbsent: [
+		MCPToolError signal: 'class not found: ' , className ].
 	cls comment: comment.
 	^ 'Comment set on: ' , className
 ]

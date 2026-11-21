@@ -50,13 +50,12 @@ MCPConventionTest >> projectPackages [
 		Smalltalk organization packageNamed: each ]
 ]
 
-{ #category : 'helpers' }
+{ #category : 'fixtures' }
 MCPConventionTest >> subjectsWithViews [
 
 	"Each association is a subject and the object an inspector of it is opened on. The class
 	 side of a subject is a subject too, because a view explaining a rule the whole hierarchy
 	 keeps belongs there."
-
 	^ { MCPServer -> MCPServerExamples server.
 		MCPRequestProcessor -> MCPRequestProcessorExamples processor.
 		MCPTool -> MCPToolExamples annotatedTool.
@@ -64,6 +63,7 @@ MCPConventionTest >> subjectsWithViews [
 		MCPLogEntry -> MCPLogEntryExamples toolCallEntry.
 		MCPLogEntry class -> MCPLogEntry.
 		MCPPharoTools class -> MCPPharoTools.
+		MCPToolError -> MCPToolErrorExamples toolError.
 		MCPTestResult -> MCPPharoToolsExamples testResult }
 ]
 
