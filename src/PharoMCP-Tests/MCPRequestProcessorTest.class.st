@@ -13,6 +13,21 @@ Class {
 }
 
 { #category : 'helpers' }
+MCPRequestProcessorTest >> completionFor: aReference argument: aName value: aValue [
+
+	| params response |
+	params := Dictionary new
+		at: 'ref' put: aReference;
+		at: 'argument' put: (Dictionary new
+			at: 'name' put: aName;
+			at: 'value' put: aValue;
+			yourself);
+		yourself.
+	response := processor processRawRequest: (self request: 'completion/complete' id: 7 params: params).
+	^ ((self parse: response) at: 'result') at: 'completion'
+]
+
+{ #category : 'helpers' }
 MCPRequestProcessorTest >> initializeResultWithVersion: aStringOrNil [
 
 	| params response |
@@ -43,6 +58,15 @@ MCPRequestProcessorTest >> request: method id: id params: params [
 		yourself)
 ]
 
+{ #category : 'helpers' }
+MCPRequestProcessorTest >> resourceReference: aUri [
+
+	^ Dictionary new
+		at: 'type' put: 'ref/resource';
+		at: 'uri' put: aUri;
+		yourself
+]
+
 { #category : 'running' }
 MCPRequestProcessorTest >> setUp [
 	super setUp.
@@ -57,6 +81,75 @@ MCPRequestProcessorTest >> setUp [
 		description: 'Adds two integers'
 		schema: Dictionary new
 		handler: [ :args | ((args at: 'a') + (args at: 'b')) printString ])
+]
+
+{ #category : 'tests - completion' }
+MCPRequestProcessorTest >> testCompletionAnswersClassNames [
+
+	| completion values |
+	completion := self
+		completionFor: (self resourceReference: 'pharo://class/')
+		argument: 'className'
+		value: 'MCPRequestProc'.
+	values := completion at: 'values'.
+	self assert: (values includes: 'MCPRequestProcessor').
+	self assert: (values includes: 'MCPRequestProcessorTest').
+	self assert: values equals: values asSortedCollection asArray.
+	self deny: (completion at: 'hasMore')
+]
+
+{ #category : 'tests - completion' }
+MCPRequestProcessorTest >> testCompletionAnswersPackageNames [
+
+	| values |
+	values := (self
+		completionFor: (self resourceReference: 'pharo://package/')
+		argument: 'packageName'
+		value: 'PharoMCP') at: 'values'.
+	self assert: (values includes: 'PharoMCP').
+	self assert: (values includes: 'PharoMCP-Tests').
+	self deny: (values anySatisfy: [ :each | (each beginsWith: 'PharoMCP') not ])
+]
+
+{ #category : 'tests - completion' }
+MCPRequestProcessorTest >> testCompletionAnswersSelectors [
+
+	| values |
+	values := (self
+		completionFor: (self resourceReference: 'pharo://selector/')
+		argument: 'selector'
+		value: 'inspectorRequestMapp') at: 'values'.
+	self assert: (values includes: 'inspectorRequestMapping:').
+	self assert: (values includes: 'inspectorRequestMappingContext:')
+]
+
+{ #category : 'tests - completion' }
+MCPRequestProcessorTest >> testCompletionIsBoundedAndSaysSo [
+
+	"The specification caps a completion at 100 values, so a short prefix must say that more
+	 exist rather than answer thousands."
+
+	| completion |
+	completion := self
+		completionFor: (self resourceReference: 'pharo://class/')
+		argument: 'className'
+		value: ''.
+	self assert: (completion at: 'values') size equals: MCPRequestProcessor maximumCompletionValues.
+	self assert: (completion at: 'hasMore').
+	self assert: (completion at: 'total') > MCPRequestProcessor maximumCompletionValues
+]
+
+{ #category : 'tests - completion' }
+MCPRequestProcessorTest >> testCompletionOfUnknownReferenceIsEmpty [
+
+	| completion |
+	completion := self
+		completionFor: (self resourceReference: 'pharo://nothing/')
+		argument: 'whatever'
+		value: 'M'.
+	self assert: (completion at: 'values') isEmpty.
+	self assert: (completion at: 'total') equals: 0.
+	self deny: (completion at: 'hasMore')
 ]
 
 { #category : 'tests - initialize' }
@@ -91,6 +184,14 @@ MCPRequestProcessorTest >> testInitializeCarriesInstructions [
 	instructions := (self initializeResultWithVersion: '2025-11-25') at: 'instructions'.
 	self assert: instructions isString.
 	self deny: instructions isEmpty
+]
+
+{ #category : 'tests - completion' }
+MCPRequestProcessorTest >> testInitializeDeclaresCompletionsCapability [
+
+	| capabilities |
+	capabilities := (self initializeResultWithVersion: nil) at: 'capabilities'.
+	self assert: (capabilities includesKey: 'completions')
 ]
 
 { #category : 'tests - initialize' }

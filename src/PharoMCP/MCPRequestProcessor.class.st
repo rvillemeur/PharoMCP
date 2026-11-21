@@ -21,6 +21,37 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'constants' }
+MCPRequestProcessor class >> completionSources [
+
+	"Each key is the prefix of a pharo:// resource URI, and each value answers the whole
+	 set of names that kind of resource can carry. The sets are built on demand, because
+	 the selector table of this image holds some ninety thousand symbols and holding a
+	 copy of it would go stale on the next compile."
+
+	^ Dictionary new
+		at: 'pharo://class' put: [ Smalltalk globals keys select: [ :each |
+			(Smalltalk globals at: each) isBehavior ] ];
+		at: 'pharo://package' put: [ Smalltalk packageOrganizer packageNames ];
+		at: 'pharo://selector' put: [ Symbol selectorTable ];
+		yourself
+]
+
+{ #category : 'constants' }
+MCPRequestProcessor class >> handlerSelectors [
+
+	"Every handler takes the params and the id, so the dispatch needs no case analysis;
+	 ping ignores its params."
+
+	^ Dictionary new
+		at: 'initialize' put: #handleInitialize:id:;
+		at: 'ping' put: #handlePing:id:;
+		at: 'tools/list' put: #handleToolsList:id:;
+		at: 'tools/call' put: #handleToolsCall:id:;
+		at: 'completion/complete' put: #handleCompletionComplete:id:;
+		yourself
+]
+
 { #category : 'accessing - server info' }
 MCPRequestProcessor class >> instructions [
 
@@ -40,6 +71,14 @@ MCPRequestProcessor class >> latestProtocolVersion [
 	^ self supportedProtocolVersions first
 ]
 
+{ #category : 'constants' }
+MCPRequestProcessor class >> maximumCompletionValues [
+
+	"The specification caps a completion response at 100 values."
+
+	^ 100
+]
+
 { #category : 'accessing' }
 MCPRequestProcessor class >> maximumResultSize [
 
@@ -48,6 +87,14 @@ MCPRequestProcessor class >> maximumResultSize [
 	 answered in full."
 
 	^ 10000
+]
+
+{ #category : 'constants' }
+MCPRequestProcessor class >> samplePrefixSize [
+
+	"Letters of a sampled name the Completion inspector view uses as a prefix."
+
+	^ 3
 ]
 
 { #category : 'accessing - server info' }
@@ -79,21 +126,67 @@ MCPRequestProcessor class >> supportedProtocolVersions [
 	^ #( '2025-11-25' '2025-06-18' '2025-03-26' '2024-11-05' )
 ]
 
-{ #category : 'handling' }
+{ #category : 'completion' }
+MCPRequestProcessor >> completionNamesFor: aUri startingWith: aPrefix [
+
+	| source |
+	source := self class completionSources associations
+		detect: [ :each | aUri beginsWith: each key ]
+		ifNone: [ ^ #() ].
+	^ ((source value value select: [ :candidate | candidate beginsWith: aPrefix ])
+		collect: [ :candidate | candidate asString ]) asSortedCollection asArray
+]
+
+{ #category : 'completion' }
+MCPRequestProcessor >> completionReportFor: aUri [
+
+	"What one completion source answers right now: how many names it holds, the prefix
+	 sampled from the first of them, and what the real completion method makes of it."
+
+	| names prefix result |
+	names := self completionNamesFor: aUri startingWith: ''.
+	prefix := names
+		ifEmpty: [ '' ]
+		ifNotEmpty: [ names first first: (self class samplePrefixSize min: names first size) ].
+	result := self completionResultFor: aUri startingWith: prefix.
+	^ Dictionary new
+		at: 'uri' put: aUri;
+		at: 'names' put: names size;
+		at: 'prefix' put: prefix;
+		at: 'total' put: (result at: 'total');
+		at: 'answered' put: (result at: 'values') size;
+		at: 'hasMore' put: (result at: 'hasMore');
+		yourself
+]
+
+{ #category : 'completion' }
+MCPRequestProcessor >> completionResultFor: aUri startingWith: aPrefix [
+
+	| names limit |
+	names := self completionNamesFor: aUri startingWith: aPrefix.
+	limit := self class maximumCompletionValues.
+	^ Dictionary new
+		at: 'values' put: (names size <= limit
+			ifTrue: [ names ]
+			ifFalse: [ names first: limit ]);
+		at: 'total' put: names size;
+		at: 'hasMore' put: names size > limit;
+		yourself
+]
+
+{ #category : 'processing' }
 MCPRequestProcessor >> dispatchRequest: request [
 
-	| method id params |
+	| method id params selector |
 	id := request at: 'id' ifAbsent: [ nil ].
 	method := request at: 'method' ifAbsent: [
 		^ self errorResponseWithId: id code: -32600 message: 'Invalid Request' ].
 	params := request at: 'params' ifAbsent: [ Dictionary new ].
 	"Notifications have no id — no response per JSON-RPC 2.0"
 	(id isNil and: [ method beginsWith: 'notifications/' ]) ifTrue: [ ^ nil ].
-	method = 'initialize' ifTrue: [ ^ self handleInitialize: params id: id ].
-	method = 'ping' ifTrue: [ ^ self handlePing: id ].
-	method = 'tools/list' ifTrue: [ ^ self handleToolsList: params id: id ].
-	method = 'tools/call' ifTrue: [ ^ self handleToolsCall: params id: id ].
-	^ self errorResponseWithId: id code: -32601 message: 'Method not found: ' , method
+	selector := self class handlerSelectors at: method ifAbsent: [
+		^ self errorResponseWithId: id code: -32601 message: 'Method not found: ' , method ].
+	^ self perform: selector with: params with: id
 ]
 
 { #category : 'response building' }
@@ -108,7 +201,23 @@ MCPRequestProcessor >> errorResponseWithId: id code: code message: msg [
 		yourself)
 ]
 
-{ #category : 'handling' }
+{ #category : 'handlers' }
+MCPRequestProcessor >> handleCompletionComplete: params id: id [
+
+	| reference uri argument prefix |
+	reference := params at: 'ref' ifAbsent: [
+		^ self errorResponseWithId: id code: -32602 message: 'Missing parameter: ref' ].
+	uri := reference at: 'uri' ifAbsent: [ reference at: 'name' ifAbsent: [ '' ] ].
+	argument := params at: 'argument' ifAbsent: [ Dictionary new ].
+	prefix := argument at: 'value' ifAbsent: [ '' ].
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'completion' put: (self completionResultFor: uri startingWith: prefix);
+			yourself)
+		id: id
+]
+
+{ #category : 'handlers' }
 MCPRequestProcessor >> handleInitialize: params id: id [
 
 	^ self
@@ -116,6 +225,7 @@ MCPRequestProcessor >> handleInitialize: params id: id [
 			at: 'protocolVersion' put: (self negotiatedProtocolVersionFor: params);
 			at: 'capabilities' put: (Dictionary new
 				at: 'tools' put: Dictionary new;
+				at: 'completions' put: Dictionary new;
 				yourself);
 			at: 'serverInfo' put: (Dictionary new
 				at: 'name' put: self class serverName;
@@ -126,11 +236,11 @@ MCPRequestProcessor >> handleInitialize: params id: id [
 		id: id
 ]
 
-{ #category : 'handling' }
-MCPRequestProcessor >> handlePing: id [
+{ #category : 'handlers' }
+MCPRequestProcessor >> handlePing: params id: id [
 
-	"A client that pings for liveness and gets an error back may treat the connection as dead,
-	 so the specification makes an empty result a MUST here."
+	"A ping carries no parameters; the argument is here so every handler in
+	 handlerSelectors has the same shape."
 
 	^ self successResponseWithResult: Dictionary new id: id
 ]
@@ -166,6 +276,30 @@ MCPRequestProcessor >> initialize [
 
 	super initialize.
 	tools := Dictionary new
+]
+
+{ #category : 'inspector' }
+MCPRequestProcessor >> inspectionCompletion: aBuilder [
+
+	<inspectorPresentationOrder: 3 title: 'Completion'>
+
+	"Each row asks the real method, with a prefix sampled from the source's own names, so a
+	 source that stops answering shows zero here instead of a prefix that never matched."
+
+	^ aBuilder newTable
+		items: (self class completionSources keys asSortedCollection asArray collect: [ :uri |
+			self completionReportFor: uri ]);
+		addColumn: (SpStringTableColumn title: 'Resource' evaluated: [ :each | each at: 'uri' ]);
+		addColumn: (SpStringTableColumn title: 'Names' evaluated: [ :each |
+			(each at: 'names') printString ]);
+		addColumn: (SpStringTableColumn title: 'Prefix' evaluated: [ :each | each at: 'prefix' ]);
+		addColumn: (SpStringTableColumn title: 'Matching' evaluated: [ :each |
+			(each at: 'total') printString ]);
+		addColumn: (SpStringTableColumn title: 'Answered' evaluated: [ :each |
+			(each at: 'answered') printString ]);
+		addColumn: (SpStringTableColumn title: 'More' evaluated: [ :each |
+			(each at: 'hasMore') printString ]);
+		yourself
 ]
 
 { #category : 'inspector' }

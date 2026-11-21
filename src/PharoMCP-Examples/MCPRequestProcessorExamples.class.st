@@ -9,6 +9,15 @@ Class {
 }
 
 { #category : 'examples' }
+MCPRequestProcessorExamples class >> completionResponse [
+
+	<sampleInstance>
+	| request |
+	request := '{"jsonrpc":"2.0","id":1,"method":"completion/complete","params":{"ref":{"type":"ref/resource","uri":"pharo://class/"},"argument":{"name":"className","value":"MCPLog"}}}'.
+	^ MCPRequestProcessor new processRawRequest: request
+]
+
+{ #category : 'examples' }
 MCPRequestProcessorExamples class >> initializeResponse [
 
 	<sampleInstance>
