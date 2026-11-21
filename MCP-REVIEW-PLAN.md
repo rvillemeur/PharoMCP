@@ -249,6 +249,16 @@ default, and the README explains which to turn on in which deployment.
   on `MCPTestResult`; a class-side view on `MCPLogEntry` gated on position in the hierarchy,
   explaining how a request maps to an entry subclass.
 - Done when: each view opens on its example without mutating the inspected object.
+- **Done.** `MCPPharoTools class >> inspectorToolTable:` lists the 22 tools with title, hints
+  and whether an output schema is set, reading the hints off each tool rather than restating
+  them. `MCPTestResult >> inspectorOutcome:` shows the counts and the first failure and error
+  message. `MCPLogEntry class >> inspectorRequestMapping:` explains which request reaches
+  which entry subclass, gated by `inspectorRequestMappingContext:` on being the root of the
+  hierarchy, and each row asks `MCPLogger` the real question through a synthesised request.
+  Two tests in `MCPConventionTest` hold all nine views: each builds on the example an
+  inspector would show, and none changes its subject, compared on a fingerprint of
+  `printString` plus the size of the collections a view could add to.
+  `MCPPharoToolsExamples` is the new examples class they read.
 
 ### 4.6 Critics clean
 
@@ -258,6 +268,17 @@ default, and the README explains which to turn on in which deployment.
   without deleting anything.
 - Done when: `run_critics` on both packages is empty except for findings this plan
   deliberately leaves to Phase 5.
+- **Done.** `self` in place of the class name in 14 class-side factories, 56 findings gone;
+  explicit `^ self` in both `clear` methods; `MCPLogEntry class >> entryClasses` names the
+  fourteen entry subclasses, and the logger and the new view read it instead of
+  `allSubclasses`, which is what makes the five unreferenced subclasses referenced;
+  `testWorldMenuOffersTheServerWindow` is the reference `MCPMenus` lacked, since the
+  `<worldMenu>` pragma is its only caller. Fixing the class-name references uncovered a real
+  defect: `testCompileMethodNormalisesLF` carried its line feed in a string literal, which
+  both the editor and the MCP compile path normalise to CR, so the test had stopped testing
+  LF; it now builds the separator from `Character lf`. What is left is 22
+  cyclomatic-complexity, 14 long-method and two excessive-methods findings, all on the
+  `MCPPharoTools` factories and their running test, which is Phase 6's subject.
 
 ---
 
