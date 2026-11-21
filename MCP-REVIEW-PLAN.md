@@ -190,6 +190,13 @@ default, and the README explains which to turn on in which deployment.
   `MCPRequestProcessorExamples`. The window opener is named `openServerWindow`.
 - Done when: the test passes, `MCPExample` is gone, and each example rebuilds its object on
   every call.
+- **Done.** `PharoMCP-Examples` holds `MCPServerExamples` (the server lifecycle entry points
+  moved off `MCPExample`, plus `openServerWindow`), `MCPToolExamples`,
+  `MCPRequestProcessorExamples`, `MCPLoggerExamples` and `MCPLogEntryExamples`, each with a
+  class comment. `MCPExample` was verified unreferenced and removed.
+  `MCPConventionTest >> testEveryExampleIsClassSideUnaryAndTagged` and
+  `testEveryExampleRebuildsItsObject` hold the shape; the second is also what references the
+  example classes, so `ReClassNotReferencedRule` stays quiet without a registry method.
 
 ### 4.2 Test package tags and comments
 
@@ -197,6 +204,12 @@ default, and the README explains which to turn on in which deployment.
   no class comment get one; `MCPRecordingTextPresenterStub` moves to `Fixtures`.
 - Done when: `run_critics` on `PharoMCP-Tests` reports no `ReClassNotCategorizedRule` and
   no class is left without a comment.
+- **Done.** Tags `Tests` and `Fixtures` exist, every test class sits in `Tests` and
+  `MCPRecordingTextPresenterStub` in `Fixtures`, and the ten missing class comments are
+  written. `MCPConventionTest >> testEveryClassCarriesACommentWithoutLineFeeds` holds all
+  three packages to it. Giving `MCPPharoToolsRunningTest` a comment broke
+  `testGetClassCommentNoComment`, which had used that class as its commentless subject; the
+  test now installs and removes a throwaway class instead.
 
 ### 4.3 Baseline groups
 
