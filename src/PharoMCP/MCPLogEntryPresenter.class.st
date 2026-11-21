@@ -51,19 +51,32 @@ MCPLogEntryPresenter >> initializePresenters [
 		addPage: (SpNotebookPage title: 'Raw' provider: [ responseRawText ])
 ]
 
-{ #category : 'api' }
+{ #category : 'updating' }
 MCPLogEntryPresenter >> showEntry: anEntry [
 
-	| extracted |
-	anEntry ifNil: [
-			requestArgumentText text: ''.
-			requestRawText text: ''.
-			responseText text: ''.
-			responseRawText text: ''.
-			^ self ].
-	requestArgumentText text: anEntry requestArgument.
-	requestRawText text: anEntry formattedRequestJson.
-	extracted := anEntry extractedResponseText.
-	responseText text: (extracted ifNil: [ '(no text content)' ]).
-	responseRawText text: anEntry formattedResponseJson
+	anEntry ifNil: [ ^ self textPresenters do: [ :each | self showText: '' in: each ] ].
+	self showText: anEntry requestArgument in: requestArgumentText.
+	self showText: anEntry formattedRequestJson in: requestRawText.
+	self showText: (anEntry extractedResponseText ifNil: [ '(no text content)' ]) in: responseText.
+	self showText: anEntry formattedResponseJson in: responseRawText
+]
+
+{ #category : 'updating' }
+MCPLogEntryPresenter >> showText: aString in: aTextPresenter [
+
+	"Move the cursor to the start before the string changes. Rubric replaces the paragraph's
+	 string first and resets the cursor after, and a redraw caught between the two reads the old
+	 cursor against the new string: RubOpeningClosingDelimiterDecorator >> drawOn: indexes
+	 #pointIndex - 1 with no bound, so a shorter string raises SubscriptOutOfBounds and Morphic
+	 paints the widget red. A nested render loop, such as the one a Metacello warning dialog
+	 drives, is enough to catch that instant."
+
+	aTextPresenter cursorPositionIndex: 1.
+	aTextPresenter text: aString
+]
+
+{ #category : 'accessing' }
+MCPLogEntryPresenter >> textPresenters [
+
+	^ { requestArgumentText . requestRawText . responseText . responseRawText }
 ]
