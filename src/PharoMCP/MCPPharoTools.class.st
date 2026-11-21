@@ -34,7 +34,7 @@ MCPPharoTools class >> allTools [
 
 { #category : 'tools' }
 MCPPharoTools class >> classCommentTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'class_comment'
 		description: 'Get or set the comment (documentation) on a class. Omit the comment parameter to read; supply it to write.'
 		schema: (Dictionary new
@@ -58,12 +58,15 @@ MCPPharoTools class >> classCommentTool [
 				comment := args at: 'comment' ifAbsent: [ nil ].
 				comment
 					ifNil: [ MCPPharoTools getClassComment: className ]
-					ifNotNil: [ MCPPharoTools setClassComment: comment onClass: className ] ] ]
+					ifNotNil: [ MCPPharoTools setClassComment: comment onClass: className ] ] ])
+		title: 'Read or write a class comment';
+		additive;
+		yourself
 ]
 
 { #category : 'tools - classes' }
 MCPPharoTools class >> classDefinitionTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'class_definition'
 		description: 'Get the definition of a Pharo class including its superclass, instance variables, and package.'
 		schema: (Dictionary new
@@ -82,7 +85,10 @@ MCPPharoTools class >> classDefinitionTool [
 			Smalltalk globals
 				at: className asSymbol
 				ifPresent: [ :class | class definitionString ]
-				ifAbsent: [ 'Error: class not found: ' , className ] ]
+				ifAbsent: [ 'Error: class not found: ' , className ] ])
+		title: 'Show a class definition';
+		readOnly;
+		yourself
 ]
 
 { #category : 'running' }
@@ -103,7 +109,7 @@ MCPPharoTools class >> classHierarchyOf: className [
 
 { #category : 'tools' }
 MCPPharoTools class >> classHierarchyTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'class_hierarchy'
 		description: 'Show superclass chain and direct subclasses of a class.'
 		schema: (Dictionary new
@@ -117,7 +123,10 @@ MCPPharoTools class >> classHierarchyTool [
 			| cls |
 			cls := args at: 'class_name' ifAbsent: [ nil ].
 			cls ifNil: [ 'Error: class_name is required' ]
-			ifNotNil: [ MCPPharoTools classHierarchyOf: cls ] ]
+			ifNotNil: [ MCPPharoTools classHierarchyOf: cls ] ])
+		title: 'Show a class hierarchy';
+		readOnly;
+		yourself
 ]
 
 { #category : 'running' }
@@ -152,7 +161,7 @@ MCPPharoTools class >> compileMethod: source onClass: className side: side class
 
 { #category : 'tools' }
 MCPPharoTools class >> compileMethodTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'compile_method'
 		description: 'Compile a method on a class. Returns the selector on success. Use side "class" for class-side methods. LF line endings are normalised automatically.'
 		schema: (Dictionary new
@@ -186,7 +195,10 @@ MCPPharoTools class >> compileMethodTool [
 			protocol := args at: 'protocol' ifAbsent: [ 'as yet unclassified' ].
 			(className isNil or: [ source isNil ])
 				ifTrue: [ 'Error: class_name and source are required' ]
-				ifFalse: [ self compileMethod: source onClass: className side: side classified: protocol ] ]
+				ifFalse: [ self compileMethod: source onClass: className side: side classified: protocol ] ])
+		title: 'Compile a method';
+		additive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -211,7 +223,7 @@ MCPPharoTools class >> createClass: className superclass: superclsName instanceV
 
 { #category : 'tools' }
 MCPPharoTools class >> createClassTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'class_create'
 		description: 'Create a new Pharo class. Fails if the class already exists. Use compile_method to add methods after creation.'
 		schema: (Dictionary new
@@ -246,7 +258,10 @@ MCPPharoTools class >> createClassTool [
 				ifFalse: [
 					superclsName := args at: 'superclass_name' ifAbsent: [ 'Object' ].
 					instVars := args at: 'instance_variables' ifAbsent: [ #() ].
-					self createClass: className superclass: superclsName instanceVariables: instVars package: package ] ]
+					self createClass: className superclass: superclsName instanceVariables: instVars package: package ] ])
+		title: 'Create a class';
+		additive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -259,7 +274,7 @@ MCPPharoTools class >> createPackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> createPackageTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'package_create'
 		description: 'Create a new package in the image. Fails if a package with that name already exists.'
 		schema: (Dictionary new
@@ -276,7 +291,10 @@ MCPPharoTools class >> createPackageTool [
 			| pkg |
 			pkg := args at: 'package' ifAbsent: [ nil ].
 			pkg ifNil: [ 'Error: package is required' ]
-			ifNotNil: [ MCPPharoTools createPackage: pkg ] ]
+			ifNotNil: [ MCPPharoTools createPackage: pkg ] ])
+		title: 'Create a package';
+		additive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -294,7 +312,7 @@ MCPPharoTools class >> deleteMethod: selector fromClass: className side: side [
 
 { #category : 'tools' }
 MCPPharoTools class >> deleteMethodTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'delete_method'
 		description: 'Remove a method from a class. Use side "class" for class-side methods. Cannot be undone — verify the selector before calling.'
 		schema: (Dictionary new
@@ -323,12 +341,15 @@ MCPPharoTools class >> deleteMethodTool [
 			side := args at: 'side' ifAbsent: [ 'instance' ].
 			(className isNil or: [ selector isNil ])
 				ifTrue: [ 'Error: class_name and selector are required' ]
-				ifFalse: [ self deleteMethod: selector fromClass: className side: side ] ]
+				ifFalse: [ self deleteMethod: selector fromClass: className side: side ] ])
+		title: 'Delete a method';
+		destructive;
+		yourself
 ]
 
 { #category : 'tools - evaluation' }
 MCPPharoTools class >> evaluateTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'evaluate_pharo'
 		description: 'Evaluate Pharo Smalltalk code and return the result as a string. Supports any valid Pharo expression or sequence of statements.'
 		schema: (Dictionary new
@@ -344,7 +365,10 @@ MCPPharoTools class >> evaluateTool [
 		handler: [ :args |
 			[ (OpalCompiler new evaluate: (args at: 'code')) printString ]
 				on: Error
-				do: [ :e | 'Error: ' , e messageText ] ]
+				do: [ :e | 'Error: ' , e messageText ] ])
+		title: 'Evaluate Pharo code';
+		destructive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -361,7 +385,7 @@ MCPPharoTools class >> findImplementorsOf: selector [
 
 { #category : 'tools' }
 MCPPharoTools class >> findImplementorsTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'find_implementors'
 		description: 'Find all classes that implement a given method selector.'
 		schema: (Dictionary new
@@ -375,7 +399,10 @@ MCPPharoTools class >> findImplementorsTool [
 			| sel |
 			sel := args at: 'selector' ifAbsent: [ nil ].
 			sel ifNil: [ 'Error: selector is required' ]
-			ifNotNil: [ MCPPharoTools findImplementorsOf: sel ] ]
+			ifNotNil: [ MCPPharoTools findImplementorsOf: sel ] ])
+		title: 'Find the implementors of a selector';
+		readOnly;
+		yourself
 ]
 
 { #category : 'running' }
@@ -395,7 +422,7 @@ MCPPharoTools class >> findSendersOf: selector [
 
 { #category : 'tools' }
 MCPPharoTools class >> findSendersTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'find_senders'
 		description: 'Find all methods that send a given message selector. Returns ClassName >> #selector per sender, capped at 100.'
 		schema: (Dictionary new
@@ -409,7 +436,10 @@ MCPPharoTools class >> findSendersTool [
 			| sel |
 			sel := args at: 'selector' ifAbsent: [ nil ].
 			sel ifNil: [ 'Error: selector is required' ]
-			ifNotNil: [ MCPPharoTools findSendersOf: sel ] ]
+			ifNotNil: [ MCPPharoTools findSendersOf: sel ] ])
+		title: 'Find the senders of a selector';
+		readOnly;
+		yourself
 ]
 
 { #category : 'running' }
@@ -489,7 +519,7 @@ MCPPharoTools class >> listClassesMatching: pattern [
 
 { #category : 'tools' }
 MCPPharoTools class >> listClassesTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'list_classes'
 		description: 'Search for classes in the Pharo image by name pattern. Returns up to 50 matching class names.'
 		schema: (Dictionary new
@@ -507,12 +537,15 @@ MCPPharoTools class >> listClassesTool [
 			pattern := args at: 'pattern' ifAbsent: [ '' ].
 			pattern isEmpty
 				ifTrue: [ 'Provide a non-empty pattern. The image contains thousands of classes.' ]
-				ifFalse: [ MCPPharoTools listClassesMatching: pattern ] ]
+				ifFalse: [ MCPPharoTools listClassesMatching: pattern ] ])
+		title: 'List classes';
+		readOnly;
+		yourself
 ]
 
 { #category : 'tools - methods' }
 MCPPharoTools class >> listMethodsTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'list_methods'
 		description: 'List all methods defined on a class with their protocol. Use side "class" for class-side methods.'
 		schema: (Dictionary new
@@ -549,7 +582,10 @@ MCPPharoTools class >> listMethodsTool [
 						ifFalse: [
 							String streamContents: [ :s |
 								methods do: [ :m |
-									s << m protocol name; << ' | '; << m selector; nextPut: Character lf ] ] ] ] ]
+									s << m protocol name; << ' | '; << m selector; nextPut: Character lf ] ] ] ] ])
+		title: 'List the methods of a class';
+		readOnly;
+		yourself
 ]
 
 { #category : 'private' }
@@ -586,7 +622,7 @@ MCPPharoTools class >> listPackagesMatching: pattern [
 
 { #category : 'tools' }
 MCPPharoTools class >> listPackagesTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'list_packages'
 		description: 'List packages in the image with class and test class counts. Optionally filter by name pattern.'
 		schema: (Dictionary new
@@ -597,12 +633,15 @@ MCPPharoTools class >> listPackagesTool [
 			at: 'required' put: #();
 			yourself)
 		handler: [ :args |
-			MCPPharoTools listPackagesMatching: (args at: 'pattern' ifAbsent: [ nil ]) ]
+			MCPPharoTools listPackagesMatching: (args at: 'pattern' ifAbsent: [ nil ]) ])
+		title: 'List packages';
+		readOnly;
+		yourself
 ]
 
 { #category : 'tools - methods' }
 MCPPharoTools class >> methodSourceTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'method_source'
 		description: 'Get the source code of a method. Use side "class" for class-side methods, "instance" for instance-side methods.'
 		schema: (Dictionary new
@@ -638,7 +677,10 @@ MCPPharoTools class >> methodSourceTool [
 					target methodDictionary
 						at: methodName asSymbol
 						ifPresent: [ :method | method sourceCode ]
-						ifAbsent: [ 'Error: method not found: ' , methodName , ' in ' , target name ] ] ]
+						ifAbsent: [ 'Error: method not found: ' , methodName , ' in ' , target name ] ] ])
+		title: 'Show method source';
+		readOnly;
+		yourself
 ]
 
 { #category : 'running' }
@@ -668,7 +710,7 @@ MCPPharoTools class >> moveMethod: selector fromClass: sourceClassName side: sid
 
 { #category : 'tools' }
 MCPPharoTools class >> moveMethodTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'method_move'
 		description: 'Move a method from one class to another, preserving source and protocol. Fails if the target class already defines the selector.'
 		schema: (Dictionary new
@@ -703,7 +745,10 @@ MCPPharoTools class >> moveMethodTool [
 				ifTrue: [ 'Error: class_name, selector and target_class are required' ]
 				ifFalse: [
 					side := args at: 'side' ifAbsent: [ 'instance' ].
-					MCPPharoTools moveMethod: selector fromClass: className side: side toClass: targetClass ] ]
+					MCPPharoTools moveMethod: selector fromClass: className side: side toClass: targetClass ] ])
+		title: 'Move a method to another class';
+		additive;
+		yourself
 ]
 
 { #category : 'registration' }
@@ -723,7 +768,7 @@ MCPPharoTools class >> removeClass: className [
 
 { #category : 'tools' }
 MCPPharoTools class >> removeClassTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'class_remove'
 		description: 'Remove a class from the image. Fails if the class has subclasses. Cannot be undone — verify the class name before calling.'
 		schema: (Dictionary new
@@ -740,7 +785,10 @@ MCPPharoTools class >> removeClassTool [
 			| className |
 			className := args at: 'class_name' ifAbsent: [ nil ].
 			className ifNil: [ 'Error: class_name is required' ]
-			ifNotNil: [ MCPPharoTools removeClass: className ] ]
+			ifNotNil: [ MCPPharoTools removeClass: className ] ])
+		title: 'Remove a class';
+		destructive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -755,7 +803,7 @@ MCPPharoTools class >> removePackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> removePackageTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'package_remove'
 		description: 'Remove an empty package from the image. Fails if the package still contains classes — remove or move them first.'
 		schema: (Dictionary new
@@ -772,7 +820,10 @@ MCPPharoTools class >> removePackageTool [
 			| pkg |
 			pkg := args at: 'package' ifAbsent: [ nil ].
 			pkg ifNil: [ 'Error: package is required' ]
-			ifNotNil: [ MCPPharoTools removePackage: pkg ] ]
+			ifNotNil: [ MCPPharoTools removePackage: pkg ] ])
+		title: 'Remove a package';
+		destructive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -790,7 +841,7 @@ MCPPharoTools class >> renameClass: oldName to: newName [
 
 { #category : 'tools' }
 MCPPharoTools class >> renameClassTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'class_rename'
 		description: 'Rename a class in the image. Does not auto-update references in method source — use search_source after renaming to find callers that need updating.'
 		schema: (Dictionary new
@@ -813,7 +864,10 @@ MCPPharoTools class >> renameClassTool [
 			newName := args at: 'new_name' ifAbsent: [ nil ].
 			(oldName isNil or: [ newName isNil ])
 				ifTrue: [ 'Error: old_name and new_name are required' ]
-				ifFalse: [ MCPPharoTools renameClass: oldName to: newName ] ]
+				ifFalse: [ MCPPharoTools renameClass: oldName to: newName ] ])
+		title: 'Rename a class';
+		additive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -843,7 +897,7 @@ MCPPharoTools class >> renameMethod: oldSelector onClass: className side: side t
 
 { #category : 'tools' }
 MCPPharoTools class >> renameMethodTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'method_rename'
 		description: 'Rename a method selector on a class. Rewrites the method source and removes the old selector. Does NOT auto-update senders — use find_senders after renaming to locate callers that need updating.'
 		schema: (Dictionary new
@@ -878,7 +932,10 @@ MCPPharoTools class >> renameMethodTool [
 				ifTrue: [ 'Error: class_name, old_selector and new_selector are required' ]
 				ifFalse: [
 					side := args at: 'side' ifAbsent: [ 'instance' ].
-					MCPPharoTools renameMethod: oldSel onClass: className side: side to: newSel ] ]
+					MCPPharoTools renameMethod: oldSel onClass: className side: side to: newSel ] ])
+		title: 'Rename a method';
+		additive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -900,7 +957,7 @@ MCPPharoTools class >> runCriticsOnPackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> runCriticsTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'run_critics'
 		description: 'Run Renraku code critics on a class or all classes in a package. Returns rule violations with descriptions.'
 		schema: (Dictionary new
@@ -917,7 +974,10 @@ MCPPharoTools class >> runCriticsTool [
 			cls := args at: 'class_name' ifAbsent: [ nil ].
 			pkg ifNotNil: [ MCPPharoTools runCriticsOnPackage: pkg ]
 			ifNil: [ cls ifNil: [ 'Error: provide class_name or package' ]
-				ifNotNil: [ MCPPharoTools runCriticsOnClass: cls ] ] ]
+				ifNotNil: [ MCPPharoTools runCriticsOnClass: cls ] ] ])
+		title: 'Run the code critics';
+		readOnly;
+		yourself
 ]
 
 { #category : 'running' }
@@ -952,7 +1012,7 @@ MCPPharoTools class >> runTestsInPackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> runTestsTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'run_tests'
 		description: 'Run a TestCase subclass, a single test method, or all TestCase subclasses in a package. Returns pass/fail/error counts and failure messages.'
 		schema: (Dictionary new
@@ -974,7 +1034,10 @@ MCPPharoTools class >> runTestsTool [
 				ifNil: [
 					className
 						ifNil: [ 'Error: provide class_name or package' ]
-						ifNotNil: [ MCPPharoTools runTestsForClass: className selector: selector ] ] ]
+						ifNotNil: [ MCPPharoTools runTestsForClass: className selector: selector ] ] ])
+		title: 'Run tests';
+		additive;
+		yourself
 ]
 
 { #category : 'running' }
@@ -1011,7 +1074,7 @@ MCPPharoTools class >> searchSourceFor: pattern inPackage: packageName caseSensi
 
 { #category : 'tools' }
 MCPPharoTools class >> searchSourceTool [
-	^ MCPTool
+	^ (MCPTool
 		name: 'search_source'
 		description: 'Search method source code for a text pattern across a class or package. Returns matching method names with the first matching line. Use for finding string literals, comments, or any text that find_implementors/find_senders cannot locate.'
 		schema: (Dictionary new
@@ -1048,7 +1111,10 @@ MCPPharoTools class >> searchSourceTool [
 					ifNil: [
 						className
 							ifNotNil: [ self searchSourceFor: pattern inClass: className caseSensitive: cs ]
-							ifNil: [ 'Error: provide class_name or package' ] ] ] ]
+							ifNil: [ 'Error: provide class_name or package' ] ] ] ])
+		title: 'Search method source';
+		readOnly;
+		yourself
 ]
 
 { #category : 'running' }

@@ -14,6 +14,28 @@ MCPPharoToolsTest >> setUp [
 	tool := MCPPharoTools runTestsTool
 ]
 
+{ #category : 'tests - annotations' }
+MCPPharoToolsTest >> testDestructiveToolsAreAnnotatedDestructive [
+
+	#( 'class_remove' 'package_remove' 'delete_method' 'evaluate_pharo' ) do: [ :each |
+		| tool |
+		tool := self toolNamed: each.
+		self assert: (tool annotations at: 'destructiveHint') description: each , ' should be destructive'.
+		self deny: (tool annotations at: 'readOnlyHint') description: each , ' should not be read only' ]
+]
+
+{ #category : 'tests - annotations' }
+MCPPharoToolsTest >> testEveryToolIsAnnotated [
+
+	"Left unset, the specification's defaults apply, and they say destructive and open world.
+	 No tool of this server is either, so none may be left to them."
+
+	MCPPharoTools allTools do: [ :each |
+		self deny: each title isNil description: each name , ' has no title'.
+		self deny: each annotations isNil description: each name , ' has no annotations'.
+		self deny: (each annotations at: 'openWorldHint') description: each name , ' is not an open world tool' ]
+]
+
 { #category : 'tests' }
 MCPPharoToolsTest >> testListMethodsOnUnknownClassSaysSo [
 
@@ -32,6 +54,18 @@ MCPPharoToolsTest >> testMCPTestResultPassCount [
 	self assert: result passedCount equals: MCPToolTest suite tests size.
 	self assert: result failureMessages isEmpty.
 	self assert: result errorMessages isEmpty
+]
+
+{ #category : 'tests - annotations' }
+MCPPharoToolsTest >> testReadOnlyToolsAreAnnotatedReadOnly [
+
+	#( 'class_definition' 'class_hierarchy' 'list_classes' 'list_methods' 'list_packages'
+		'method_source' 'find_implementors' 'find_senders' 'search_source' 'run_critics' )
+		do: [ :each |
+			| tool |
+			tool := self toolNamed: each.
+			self assert: (tool annotations at: 'readOnlyHint') description: each , ' should be read only'.
+			self deny: (tool annotations at: 'destructiveHint') description: each , ' should not be destructive' ]
 ]
 
 { #category : 'tests - run_tests' }
@@ -109,4 +143,10 @@ MCPPharoToolsTest >> testToolSchemaHasAllParams [
 	self assert: (props includesKey: 'class_name').
 	self assert: (props includesKey: 'selector').
 	self assert: (props includesKey: 'package')
+]
+
+{ #category : 'helpers' }
+MCPPharoToolsTest >> toolNamed: aString [
+
+	^ MCPPharoTools allTools detect: [ :each | each name = aString ]
 ]
