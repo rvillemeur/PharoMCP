@@ -61,7 +61,7 @@ MCPPharoTools class >> classCommentTool [
 					ifNotNil: [ MCPPharoTools setClassComment: comment onClass: className ] ] ]
 ]
 
-{ #category : 'tools' }
+{ #category : 'tools - classes' }
 MCPPharoTools class >> classDefinitionTool [
 	^ MCPTool
 		name: 'class_definition'
@@ -77,13 +77,12 @@ MCPPharoTools class >> classDefinitionTool [
 			at: 'required' put: #('className');
 			yourself)
 		handler: [ :args |
-			args at: 'className'
-				ifPresent: [ :className |
-					Smalltalk globals
-						at: className asSymbol
-						ifPresent: [ :class | class definitionString ]
-						ifAbsent: [ 'Error: class not found: ' , className ] ]
-				ifAbsent: [ 'Error: missing className' ] ]
+			| className |
+			className := args at: 'className'.
+			Smalltalk globals
+				at: className asSymbol
+				ifPresent: [ :class | class definitionString ]
+				ifAbsent: [ 'Error: class not found: ' , className ] ]
 ]
 
 { #category : 'running' }
@@ -327,7 +326,7 @@ MCPPharoTools class >> deleteMethodTool [
 				ifFalse: [ self deleteMethod: selector fromClass: className side: side ] ]
 ]
 
-{ #category : 'tools' }
+{ #category : 'tools - evaluation' }
 MCPPharoTools class >> evaluateTool [
 	^ MCPTool
 		name: 'evaluate_pharo'
@@ -343,12 +342,9 @@ MCPPharoTools class >> evaluateTool [
 			at: 'required' put: #('code');
 			yourself)
 		handler: [ :args |
-			args at: 'code'
-				ifPresent: [ :code |
-					[ (OpalCompiler new evaluate: code) printString ]
-						on: Error
-						do: [ :e | 'Error: ' , e messageText ] ]
-				ifAbsent: [ 'Error: missing code argument' ] ]
+			[ (OpalCompiler new evaluate: (args at: 'code')) printString ]
+				on: Error
+				do: [ :e | 'Error: ' , e messageText ] ]
 ]
 
 { #category : 'running' }
@@ -514,7 +510,7 @@ MCPPharoTools class >> listClassesTool [
 				ifFalse: [ MCPPharoTools listClassesMatching: pattern ] ]
 ]
 
-{ #category : 'tools' }
+{ #category : 'tools - methods' }
 MCPPharoTools class >> listMethodsTool [
 	^ MCPTool
 		name: 'list_methods'
@@ -535,21 +531,25 @@ MCPPharoTools class >> listMethodsTool [
 			at: 'required' put: #('className');
 			yourself)
 		handler: [ :args |
-			| className side cls target methods |
-			className := args at: 'className' ifAbsent: [ nil ].
-			className ifNil: [ 'Error: missing className' ] ifNotNil: [
-				cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
-				side := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'.
-				target := side ifTrue: [ cls class ] ifFalse: [ cls ].
-				methods := target methods asSortedCollection: [ :a :b |
-					a protocol name < b protocol name or: [
-					a protocol name = b protocol name and: [ a selector < b selector ] ] ].
-				methods isEmpty
-					ifTrue: [ 'No methods defined on ' , className ]
-					ifFalse: [
-						String streamContents: [ :s |
-							methods do: [ :m |
-								s << m protocol name; << ' | '; << m selector; nextPut: Character lf ] ] ] ] ]
+			| className cls target methods |
+			className := args at: 'className'.
+			cls := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+			cls
+				ifNil: [ 'Error: class not found: ' , className ]
+				ifNotNil: [
+					target := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
+						ifTrue: [ cls class ]
+						ifFalse: [ cls ].
+					methods := target methods asSortedCollection: [ :a :b |
+						a protocol name < b protocol name or: [
+						a protocol name = b protocol name and: [
+						a selector < b selector ] ] ].
+					methods isEmpty
+						ifTrue: [ 'No methods defined on ' , className ]
+						ifFalse: [
+							String streamContents: [ :s |
+								methods do: [ :m |
+									s << m protocol name; << ' | '; << m selector; nextPut: Character lf ] ] ] ] ]
 ]
 
 { #category : 'private' }
@@ -600,61 +600,45 @@ MCPPharoTools class >> listPackagesTool [
 			MCPPharoTools listPackagesMatching: (args at: 'pattern' ifAbsent: [ nil ]) ]
 ]
 
-{ #category : 'tools' }
+{ #category : 'tools - methods' }
 MCPPharoTools class >> methodSourceTool [
-
 	^ MCPTool
-		  name: 'method_source'
-		  description:
-		  'Get the source code of a method. Use side "class" for class-side methods, "instance" for instance-side methods.'
-		  schema: (Dictionary new
-				   at: 'type' put: 'object';
-				   at: 'properties' put: (Dictionary new
-						    at: 'className' put: (Dictionary new
-								     at: 'type' put: 'string';
-								     at: 'description' put: 'Name of the class';
-								     yourself);
-						    at: 'methodName' put: (Dictionary new
-							     at: 'type' put: 'string';
-							     at: 'description'
-							     put: 'Selector of the method (e.g. "add:" or "printOn:")';
-							     yourself);
-						    at: 'side' put: (Dictionary new
-							     at: 'type' put: 'string';
-							     at: 'enum' put: #( 'instance' 'class' );
-							     at: 'description'
-							     put:
-								     'Whether to look on the instance side or class side. Defaults to instance.';
-							     yourself);
-						    yourself);
-				   at: 'required' put: #( 'className' 'methodName' );
-				   yourself)
-		  handler: [ :args |
-				  args
-					  at: 'className'
-					  ifPresent: [ :className |
-							  args
-								  at: 'methodName'
-								  ifPresent: [ :methodName |
-										  | class side |
-										  class := Smalltalk globals
-											           at: className asSymbol
-											           ifAbsent: [ nil ].
-										  class
-											  ifNil: [ 'Error: class not found: ' , className ]
-											  ifNotNil: [
-													  side := (args at: 'side' ifAbsent: [ 'instance' ])
-													          = 'class'
-														          ifTrue: [ class class ]
-														          ifFalse: [ class ].
-													  side methodDictionary
-														  at: methodName asSymbol
-														  ifPresent: [ :method | method sourceCode ]
-														  ifAbsent: [
-														  'Error: method not found: ' , methodName , ' in '
-														  , class name ] ] ]
-								  ifAbsent: [ 'Error: missing methodName' ] ]
-					  ifAbsent: [ 'Error: missing className' ] ]
+		name: 'method_source'
+		description: 'Get the source code of a method. Use side "class" for class-side methods, "instance" for instance-side methods.'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'className' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Name of the class';
+					yourself);
+				at: 'methodName' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'description' put: 'Selector of the method (e.g. "add:" or "printOn:")';
+					yourself);
+				at: 'side' put: (Dictionary new
+					at: 'type' put: 'string';
+					at: 'enum' put: #( 'instance' 'class' );
+					at: 'description' put: 'Whether to look on the instance side or class side. Defaults to instance.';
+					yourself);
+				yourself);
+			at: 'required' put: #( 'className' 'methodName' );
+			yourself)
+		handler: [ :args |
+			| className methodName class target |
+			className := args at: 'className'.
+			methodName := args at: 'methodName'.
+			class := Smalltalk globals at: className asSymbol ifAbsent: [ nil ].
+			class
+				ifNil: [ 'Error: class not found: ' , className ]
+				ifNotNil: [
+					target := (args at: 'side' ifAbsent: [ 'instance' ]) = 'class'
+						ifTrue: [ class class ]
+						ifFalse: [ class ].
+					target methodDictionary
+						at: methodName asSymbol
+						ifPresent: [ :method | method sourceCode ]
+						ifAbsent: [ 'Error: method not found: ' , methodName , ' in ' , target name ] ] ]
 ]
 
 { #category : 'running' }

@@ -114,6 +114,34 @@ MCPRequestProcessorTest >> testInitializeReturnsServerInfo [
 	self assert: (serverInfo includesKey: 'version')
 ]
 
+{ #category : 'tests - tools/call' }
+MCPRequestProcessorTest >> testMissingRequiredArgumentIsToolError [
+
+	| response result called |
+	called := false.
+	processor registerTool: (MCPTool
+		name: 'needs_text'
+		description: 'Needs a text argument'
+		schema: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'text' put: (Dictionary new at: 'type' put: 'string'; yourself);
+				yourself);
+			at: 'required' put: #( 'text' );
+			yourself)
+		handler: [ :args | called := true. args at: 'text' ]).
+	response := processor processRawRequest: (self request: 'tools/call' id: 1 params: (Dictionary new
+		at: 'name' put: 'needs_text';
+		at: 'arguments' put: Dictionary new;
+		yourself)).
+	result := (self parse: response) at: 'result'.
+	self deny: called.
+	self assert: (result at: 'isError').
+	self
+		assert: ((result at: 'content') first at: 'text')
+		equals: 'Missing required argument: text'
+]
+
 { #category : 'tests' }
 MCPRequestProcessorTest >> testNotificationReturnsNil [
 	| response |
@@ -262,6 +290,18 @@ MCPRequestProcessorTest >> testUnknownMethodReturnsError32601 [
 		(self request: 'nonexistent/method' id: 5 params: Dictionary new).
 	error := (self parse: response) at: 'error'.
 	self assert: (error at: 'code') equals: -32601
+]
+
+{ #category : 'tests - tools/call' }
+MCPRequestProcessorTest >> testUnknownToolIsProtocolError [
+
+	| response error |
+	response := processor processRawRequest: (self request: 'tools/call' id: 1 params: (Dictionary new
+		at: 'name' put: 'no_such_tool';
+		at: 'arguments' put: Dictionary new;
+		yourself)).
+	error := (self parse: response) at: 'error'.
+	self assert: (error at: 'code') equals: -32602
 ]
 
 { #category : 'tests' }

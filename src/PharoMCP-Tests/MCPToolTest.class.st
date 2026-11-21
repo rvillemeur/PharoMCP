@@ -34,6 +34,26 @@ MCPToolTest >> testAsDictionaryHasRequiredKeys [
 	self assert: (dict includesKey: 'inputSchema')
 ]
 
+{ #category : 'tests - validation' }
+MCPToolTest >> testMissingRequiredArgumentsNamesWhatIsAbsent [
+
+	| tool |
+	tool := MCPTool
+		name: 'needs_two'
+		description: 'Needs two arguments'
+		schema: (Dictionary new
+			at: 'required' put: #( 'first' 'second' );
+			yourself)
+		handler: [ :args | '' ].
+	self
+		assert: (tool missingRequiredArgumentsIn: (Dictionary new at: 'first' put: 1; yourself))
+		equals: #( 'second' ) asOrderedCollection.
+	self assert: (tool missingRequiredArgumentsIn: (Dictionary new
+		at: 'first' put: 1;
+		at: 'second' put: 2;
+		yourself)) isEmpty
+]
+
 { #category : 'tests' }
 MCPToolTest >> testToolCallWithBlock [
 	| tool result |
@@ -72,4 +92,16 @@ MCPToolTest >> testToolCreation [
 	self assert: tool name equals: 'my_tool'.
 	self assert: tool description equals: 'A test tool'.
 	self assert: (tool inputSchema at: 'type') equals: 'object'
+]
+
+{ #category : 'tests - validation' }
+MCPToolTest >> testToolWithoutRequiredListMissesNothing [
+
+	| tool |
+	tool := MCPTool
+		name: 'needs_nothing'
+		description: 'Needs no argument'
+		schema: Dictionary new
+		handler: [ :args | '' ].
+	self assert: (tool missingRequiredArgumentsIn: Dictionary new) isEmpty
 ]

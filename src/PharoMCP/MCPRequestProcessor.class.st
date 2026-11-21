@@ -92,35 +92,28 @@ MCPRequestProcessor >> handlePing: id [
 	^ self successResponseWithResult: Dictionary new id: id
 ]
 
-{ #category : 'handlers' }
+{ #category : 'handling' }
 MCPRequestProcessor >> handleToolsCall: params id: id [
-	| toolName args tool resultText isError |
+
+	| toolName args tool missing resultText isError |
 	toolName := params at: 'name' ifAbsent: [
 		^ self errorResponseWithId: id code: -32602 message: 'Missing parameter: name' ].
 	args := params at: 'arguments' ifAbsent: [ Dictionary new ].
 	tool := tools at: toolName ifAbsent: [
 		^ self errorResponseWithId: id code: -32602 message: 'Tool not found: ' , toolName ].
-
+	missing := tool missingRequiredArgumentsIn: args.
+	missing ifNotEmpty: [
+		^ self toolErrorResult: (self missingArgumentsMessage: missing) id: id ].
 	isError := false.
 	resultText := [ tool call: args ]
 		on: Error
 		do: [ :e |
 			isError := true.
 			'Error: ' , e messageText ].
-
 	resultText isString ifFalse: [ resultText := resultText printString ].
 	resultText size > 10000 ifTrue: [
 		resultText := (resultText copyFrom: 1 to: 10000) , '...(truncated)' ].
-
-	^ self
-		successResponseWithResult: (Dictionary new
-			at: 'content' put: (Array with: (Dictionary new
-				at: 'type' put: 'text';
-				at: 'text' put: resultText;
-				yourself));
-			at: 'isError' put: isError;
-			yourself)
-		id: id
+	^ self toolResult: resultText isError: isError id: id
 ]
 
 { #category : 'handlers' }
@@ -167,6 +160,14 @@ MCPRequestProcessor >> inspectionTools: aBuilder [
 ]
 
 { #category : 'private' }
+MCPRequestProcessor >> missingArgumentsMessage: aCollection [
+
+	^ (aCollection size = 1
+		ifTrue: [ 'Missing required argument: ' ]
+		ifFalse: [ 'Missing required arguments: ' ]) , (', ' join: aCollection)
+]
+
+{ #category : 'private' }
 MCPRequestProcessor >> negotiatedProtocolVersionFor: params [
 
 	| requested |
@@ -203,6 +204,26 @@ MCPRequestProcessor >> successResponseWithResult: result id: id [
 		at: 'id' put: id;
 		at: 'result' put: result;
 		yourself)
+]
+
+{ #category : 'private' }
+MCPRequestProcessor >> toolErrorResult: aString id: id [
+
+	^ self toolResult: aString isError: true id: id
+]
+
+{ #category : 'private' }
+MCPRequestProcessor >> toolResult: aString isError: aBoolean id: id [
+
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'content' put: (Array with: (Dictionary new
+				at: 'type' put: 'text';
+				at: 'text' put: aString;
+				yourself));
+			at: 'isError' put: aBoolean;
+			yourself)
+		id: id
 ]
 
 { #category : 'accessing' }

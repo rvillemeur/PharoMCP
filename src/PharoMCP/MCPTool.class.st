@@ -93,6 +93,18 @@ MCPTool >> inspectionSchema: aBuilder [
 		yourself
 ]
 
+{ #category : 'validating' }
+MCPTool >> missingRequiredArgumentsIn: arguments [
+
+	"The names the tool's own schema requires and the call did not carry. The specification asks
+	 for these to come back as a tool error rather than a protocol error, so the model reading
+	 the answer can correct its own call."
+
+	| required |
+	required := inputSchema at: 'required' ifAbsent: [ ^ OrderedCollection new ].
+	^ (required reject: [ :each | arguments includesKey: each ]) asOrderedCollection
+]
+
 { #category : 'accessing' }
 MCPTool >> name [
 	^ name

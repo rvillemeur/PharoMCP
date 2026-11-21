@@ -14,6 +14,16 @@ MCPPharoToolsTest >> setUp [
 	tool := MCPPharoTools runTestsTool
 ]
 
+{ #category : 'tests' }
+MCPPharoToolsTest >> testListMethodsOnUnknownClassSaysSo [
+
+	| tool |
+	tool := MCPPharoTools listMethodsTool.
+	self
+		assert: (tool call: (Dictionary new at: 'className' put: 'NoSuchClassHere'; yourself))
+		equals: 'Error: class not found: NoSuchClassHere'
+]
+
 { #category : 'tests - MCPTestResult' }
 MCPPharoToolsTest >> testMCPTestResultPassCount [
 	| result |
