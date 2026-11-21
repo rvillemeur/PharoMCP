@@ -57,8 +57,8 @@ MCPPharoTools class >> classCommentTool [
 			className ifNil: [ 'Error: class_name is required' ] ifNotNil: [
 				comment := args at: 'comment' ifAbsent: [ nil ].
 				comment
-					ifNil: [ MCPPharoTools getClassComment: className ]
-					ifNotNil: [ MCPPharoTools setClassComment: comment onClass: className ] ] ])
+					ifNil: [ self getClassComment: className ]
+					ifNotNil: [ self setClassComment: comment onClass: className ] ] ])
 		title: 'Read or write a class comment';
 		additive;
 		yourself
@@ -123,7 +123,7 @@ MCPPharoTools class >> classHierarchyTool [
 			| cls |
 			cls := args at: 'class_name' ifAbsent: [ nil ].
 			cls ifNil: [ 'Error: class_name is required' ]
-			ifNotNil: [ MCPPharoTools classHierarchyOf: cls ] ])
+			ifNotNil: [ self classHierarchyOf: cls ] ])
 		title: 'Show a class hierarchy';
 		readOnly;
 		yourself
@@ -291,7 +291,7 @@ MCPPharoTools class >> createPackageTool [
 			| pkg |
 			pkg := args at: 'package' ifAbsent: [ nil ].
 			pkg ifNil: [ 'Error: package is required' ]
-			ifNotNil: [ MCPPharoTools createPackage: pkg ] ])
+			ifNotNil: [ self createPackage: pkg ] ])
 		title: 'Create a package';
 		additive;
 		yourself
@@ -459,7 +459,7 @@ MCPPharoTools class >> findImplementorsTool [
 			| sel |
 			sel := args at: 'selector' ifAbsent: [ nil ].
 			sel ifNil: [ 'Error: selector is required' ]
-			ifNotNil: [ MCPPharoTools findImplementorsOf: sel ] ])
+			ifNotNil: [ self findImplementorsOf: sel ] ])
 		title: 'Find the implementors of a selector';
 		readOnly;
 		yourself
@@ -496,7 +496,7 @@ MCPPharoTools class >> findSendersTool [
 			| sel |
 			sel := args at: 'selector' ifAbsent: [ nil ].
 			sel ifNil: [ 'Error: selector is required' ]
-			ifNotNil: [ MCPPharoTools findSendersOf: sel ] ])
+			ifNotNil: [ self findSendersOf: sel ] ])
 		title: 'Find the senders of a selector';
 		readOnly;
 		yourself
@@ -632,7 +632,7 @@ MCPPharoTools class >> listClassesTool [
 			pattern := args at: 'pattern' ifAbsent: [ '' ].
 			pattern isEmpty
 				ifTrue: [ 'Provide a non-empty pattern. The image contains thousands of classes.' ]
-				ifFalse: [ MCPPharoTools listClassesMatching: pattern ] ])
+				ifFalse: [ self listClassesMatching: pattern ] ])
 		title: 'List classes';
 		readOnly;
 		yourself
@@ -728,7 +728,7 @@ MCPPharoTools class >> listPackagesTool [
 			at: 'required' put: #();
 			yourself)
 		handler: [ :args |
-			MCPPharoTools listPackagesMatching: (args at: 'pattern' ifAbsent: [ nil ]) ])
+			self listPackagesMatching: (args at: 'pattern' ifAbsent: [ nil ]) ])
 		title: 'List packages';
 		readOnly;
 		yourself
@@ -859,7 +859,7 @@ MCPPharoTools class >> moveMethodTool [
 				ifTrue: [ 'Error: class_name, selector and target_class are required' ]
 				ifFalse: [
 					side := args at: 'side' ifAbsent: [ 'instance' ].
-					MCPPharoTools moveMethod: selector fromClass: className side: side toClass: targetClass ] ])
+					self moveMethod: selector fromClass: className side: side toClass: targetClass ] ])
 		title: 'Move a method to another class';
 		additive;
 		yourself
@@ -899,7 +899,7 @@ MCPPharoTools class >> removeClassTool [
 			| className |
 			className := args at: 'class_name' ifAbsent: [ nil ].
 			className ifNil: [ 'Error: class_name is required' ]
-			ifNotNil: [ MCPPharoTools removeClass: className ] ])
+			ifNotNil: [ self removeClass: className ] ])
 		title: 'Remove a class';
 		destructive;
 		yourself
@@ -934,7 +934,7 @@ MCPPharoTools class >> removePackageTool [
 			| pkg |
 			pkg := args at: 'package' ifAbsent: [ nil ].
 			pkg ifNil: [ 'Error: package is required' ]
-			ifNotNil: [ MCPPharoTools removePackage: pkg ] ])
+			ifNotNil: [ self removePackage: pkg ] ])
 		title: 'Remove a package';
 		destructive;
 		yourself
@@ -978,7 +978,7 @@ MCPPharoTools class >> renameClassTool [
 			newName := args at: 'new_name' ifAbsent: [ nil ].
 			(oldName isNil or: [ newName isNil ])
 				ifTrue: [ 'Error: old_name and new_name are required' ]
-				ifFalse: [ MCPPharoTools renameClass: oldName to: newName ] ])
+				ifFalse: [ self renameClass: oldName to: newName ] ])
 		title: 'Rename a class';
 		additive;
 		yourself
@@ -1046,7 +1046,7 @@ MCPPharoTools class >> renameMethodTool [
 				ifTrue: [ 'Error: class_name, old_selector and new_selector are required' ]
 				ifFalse: [
 					side := args at: 'side' ifAbsent: [ 'instance' ].
-					MCPPharoTools renameMethod: oldSel onClass: className side: side to: newSel ] ])
+					self renameMethod: oldSel onClass: className side: side to: newSel ] ])
 		title: 'Rename a method';
 		additive;
 		yourself
@@ -1106,9 +1106,9 @@ MCPPharoTools class >> runCriticsTool [
 			| pkg cls |
 			pkg := args at: 'package' ifAbsent: [ nil ].
 			cls := args at: 'class_name' ifAbsent: [ nil ].
-			pkg ifNotNil: [ MCPPharoTools runCriticsOnPackage: pkg ]
+			pkg ifNotNil: [ self runCriticsOnPackage: pkg ]
 			ifNil: [ cls ifNil: [ 'Error: provide class_name or package' ]
-				ifNotNil: [ MCPPharoTools runCriticsOnClass: cls ] ] ])
+				ifNotNil: [ self runCriticsOnClass: cls ] ] ])
 		title: 'Run the code critics';
 		outputSchema: self critiqueReportSchema;
 		readOnly;
@@ -1167,11 +1167,11 @@ MCPPharoTools class >> runTestsTool [
 			selector := args at: 'selector' ifAbsent: [ nil ].
 			package := args at: 'package' ifAbsent: [ nil ].
 			package
-				ifNotNil: [ MCPPharoTools runTestsInPackage: package ]
+				ifNotNil: [ self runTestsInPackage: package ]
 				ifNil: [
 					className
 						ifNil: [ 'Error: provide class_name or package' ]
-						ifNotNil: [ MCPPharoTools runTestsForClass: className selector: selector ] ] ])
+						ifNotNil: [ self runTestsForClass: className selector: selector ] ] ])
 		title: 'Run tests';
 		outputSchema: self testReportSchema;
 		additive;

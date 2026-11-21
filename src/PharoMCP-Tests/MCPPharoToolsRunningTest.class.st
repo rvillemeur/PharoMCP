@@ -81,43 +81,48 @@ MCPPharoToolsRunningTest >> testCollectCritiquesIncludesBothSides [
 	self assert: combined size >= instanceOnly size
 ]
 
-{ #category : 'tests - compileMethod' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testCompileMethodClassSide [
+
 	| result |
 	result := MCPPharoTools compileMethod: 'compileTestClassMethod ^ 77'
-		onClass: 'MCPPharoToolsRunningTest'
+		onClass: self class name
 		side: 'class'
 		classified: 'private'.
 	self assert: (result includesSubstring: 'class').
-	self assert: MCPPharoToolsRunningTest compileTestClassMethod equals: 77.
-	MCPPharoToolsRunningTest class removeSelector: #compileTestClassMethod
+	self assert: self class compileTestClassMethod equals: 77.
+	self class classSide removeSelector: #compileTestClassMethod
 ]
 
-{ #category : 'tests - compileMethod' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testCompileMethodNormalisesLF [
+
+	"The line feed is built from Character lf rather than written into the literal, because
+	 the tool under test normalises line endings and would otherwise be handed a CR."
+
 	| lfSource result |
-	lfSource := 'lfTestMethod
-	^ 55'.
+	lfSource := 'lfTestMethod' , Character lf asString , '	^ 55'.
 	result := MCPPharoTools compileMethod: lfSource
-		onClass: 'MCPPharoToolsRunningTest'
+		onClass: self class name
 		side: 'instance'
 		classified: 'private'.
 	self assert: (result beginsWith: 'Compiled:').
-	self assert: MCPPharoToolsRunningTest new lfTestMethod equals: 55.
-	MCPPharoToolsRunningTest removeSelector: #lfTestMethod
+	self assert: self class new lfTestMethod equals: 55.
+	self class removeSelector: #lfTestMethod
 ]
 
-{ #category : 'tests - compileMethod' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testCompileMethodSuccess [
+
 	| result |
 	result := MCPPharoTools compileMethod: 'compileTestMethod ^ 99'
-		onClass: 'MCPPharoToolsRunningTest'
+		onClass: self class name
 		side: 'instance'
 		classified: 'private'.
 	self assert: (result beginsWith: 'Compiled:').
 	self assert: (result includesSubstring: 'compileTestMethod').
-	self assert: MCPPharoToolsRunningTest new compileTestMethod equals: 99.
-	MCPPharoToolsRunningTest removeSelector: #compileTestMethod
+	self assert: self class new compileTestMethod equals: 99.
+	self class removeSelector: #compileTestMethod
 ]
 
 { #category : 'tests - compileMethod' }
@@ -262,22 +267,24 @@ MCPPharoToolsRunningTest >> testCreatePackageToolInAllTools [
 	self assert: (MCPPharoTools allTools anySatisfy: [ :t | t name = 'package_create' ])
 ]
 
-{ #category : 'tests - deleteMethod' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testDeleteMethodClassSide [
+
 	| result |
-	MCPPharoToolsRunningTest class compile: 'tempDeleteMeClass ^ 0' classified: 'private'.
-	result := MCPPharoTools deleteMethod: 'tempDeleteMeClass' fromClass: 'MCPPharoToolsRunningTest' side: 'class'.
+	self class classSide compile: 'tempDeleteMeClass ^ 0' classified: 'private'.
+	result := MCPPharoTools deleteMethod: 'tempDeleteMeClass' fromClass: self class name side: 'class'.
 	self assert: (result includesSubstring: 'class').
-	self deny: (MCPPharoToolsRunningTest class includesSelector: #tempDeleteMeClass)
+	self deny: (self class classSide includesSelector: #tempDeleteMeClass)
 ]
 
-{ #category : 'tests - deleteMethod' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testDeleteMethodSuccess [
+
 	| result |
-	MCPPharoToolsRunningTest compile: 'tempDeleteMe ^ 0' classified: 'private'.
-	result := MCPPharoTools deleteMethod: 'tempDeleteMe' fromClass: 'MCPPharoToolsRunningTest' side: 'instance'.
+	self class compile: 'tempDeleteMe ^ 0' classified: 'private'.
+	result := MCPPharoTools deleteMethod: 'tempDeleteMe' fromClass: self class name side: 'instance'.
 	self assert: (result beginsWith: 'Deleted:').
-	self deny: (MCPPharoToolsRunningTest includesSelector: #tempDeleteMe)
+	self deny: (self class includesSelector: #tempDeleteMe)
 ]
 
 { #category : 'tests - deleteMethod' }
@@ -827,12 +834,13 @@ MCPPharoToolsRunningTest >> testSearchSourceToolInAllTools [
 	self assert: (MCPPharoTools allTools anySatisfy: [:t | t name = 'search_source'])
 ]
 
-{ #category : 'tests - classComment' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testSetClassCommentRoundtrip [
-	| original r |
-	original := MCPPharoToolsRunningTest comment.
-	[ r := MCPPharoTools setClassComment: 'Test comment XYZ' onClass: 'MCPPharoToolsRunningTest'.
-	self assert: (r beginsWith: 'Comment set on:').
-	self assert: (MCPPharoTools getClassComment: 'MCPPharoToolsRunningTest') equals: 'Test comment XYZ' ]
-	ensure: [ MCPPharoToolsRunningTest comment: original ]
+
+	| original result |
+	original := self class comment.
+	[ result := MCPPharoTools setClassComment: 'Test comment XYZ' onClass: self class name.
+	self assert: (result beginsWith: 'Comment set on:').
+	self assert: (MCPPharoTools getClassComment: self class name) equals: 'Test comment XYZ' ]
+		ensure: [ self class comment: original ]
 ]

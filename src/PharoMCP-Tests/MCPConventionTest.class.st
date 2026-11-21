@@ -81,6 +81,19 @@ MCPConventionTest >> testBaselineDeclaresTheExpectedGroups [
 ]
 
 { #category : 'tests' }
+MCPConventionTest >> testClearAnswersTheLogger [
+
+	"A clear that answers its last expression answers the collection it just built, which a
+	 cascade would then keep sending to."
+
+	| logger |
+	logger := MCPLoggerExamples logger.
+	self assert: logger clear identicalTo: logger.
+	self assert: logger entries isEmpty.
+	self assert: MCPNullLogger new clear class equals: MCPNullLogger
+]
+
+{ #category : 'tests' }
 MCPConventionTest >> testDefaultGroupLoadsNoTestPackage [
 
 	"A client loading the server has no use for the test or example packages, and MuTalk is a
@@ -90,6 +103,18 @@ MCPConventionTest >> testDefaultGroupLoadsNoTestPackage [
 	spec := BaselineOfPharoMCP project version spec.
 	default := spec groups detect: [ :each | each name = 'default' ].
 	self assert: default includes asSet equals: #( 'PharoMCP' ) asSet
+]
+
+{ #category : 'tests' }
+MCPConventionTest >> testEntryClassRegistryHoldsEverySubclass [
+
+	"The registry is what makes each entry subclass referenced from code; a subclass left out
+	 of it would be picked by nothing and read by nobody."
+
+	self
+		assert: MCPLogEntry entryClasses asSet
+		equals: MCPLogEntry subclasses asSet.
+	self deny: (MCPLogEntry entryClasses includes: MCPLogEntry)
 ]
 
 { #category : 'tests' }
@@ -200,4 +225,21 @@ MCPConventionTest >> testProtocolRevisionStringsLiveInOneMethod [
 	self
 		assert: (writers collect: [ :each | each selector ]) asSet
 		equals: (Set with: #supportedProtocolVersions with: #assumedProtocolVersion)
+]
+
+{ #category : 'tests' }
+MCPConventionTest >> testWorldMenuOffersTheServerWindow [
+
+	"MCPMenus is reached only through its <worldMenu> pragma, so nothing in the image
+	 references it; this test is that reference, and it holds the menu item too."
+
+	| builder |
+	builder := PragmaMenuBuilder new.
+	MCPMenus buildWorldMenu: builder.
+	self
+		assert: (builder menuEntitled: #PharoMCP) notNil
+		description: 'the world menu carries no PharoMCP group'.
+	self
+		assert: ((MCPMenus class >> #buildWorldMenu:) sourceCode includesSubstring: 'MCPServerPresenter open')
+		description: 'the menu item no longer opens the server window'
 ]

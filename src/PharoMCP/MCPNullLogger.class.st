@@ -11,7 +11,10 @@ Class {
 
 { #category : 'accessing' }
 MCPNullLogger >> clear [
-	"no-op"
+
+	"Nothing is recorded, so nothing is cleared."
+
+	^ self
 ]
 
 { #category : 'accessing' }

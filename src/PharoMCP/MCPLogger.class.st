@@ -15,7 +15,9 @@ Class {
 
 { #category : 'accessing' }
 MCPLogger >> clear [
-	entries := OrderedCollection new
+
+	entries := OrderedCollection new.
+	^ self
 ]
 
 { #category : 'accessing' }
@@ -25,11 +27,12 @@ MCPLogger >> entries [
 
 { #category : 'private' }
 MCPLogger >> entryClassForMethod: method in: parsed [
+
 	| toolName |
 	toolName := method = 'tools/call'
 		ifTrue: [ (parsed at: 'params' ifAbsent: [ Dictionary new ]) at: 'name' ifAbsent: [ '' ] ]
 		ifFalse: [ method ].
-	^ MCPLogEntry allSubclasses
+	^ MCPLogEntry entryClasses
 		detect: [ :c | (c class includesSelector: #toolName) and: [ c toolName = toolName ] ]
 		ifNone: [ MCPLogEntry ]
 ]

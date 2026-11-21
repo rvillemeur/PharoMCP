@@ -21,6 +21,19 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'accessing' }
+MCPLogEntry class >> entryClasses [
+
+	"Written out rather than read off the hierarchy, so each subclass is referenced from
+	 code and a reader grepping for its name finds the one place that chooses it."
+
+	^ { MCPClassDefinitionLogEntry. MCPClassHierarchyLogEntry. MCPEvalLogEntry.
+		MCPFindImplementorsLogEntry. MCPFindSendersLogEntry. MCPInitializeLogEntry.
+		MCPListClassesLogEntry. MCPListMethodsLogEntry. MCPListPackagesLogEntry.
+		MCPMethodSourceLogEntry. MCPNotificationLogEntry. MCPRunCriticsLogEntry.
+		MCPRunTestsLogEntry. MCPToolsListLogEntry }
+]
+
 { #category : 'inspector' }
 MCPLogEntry class >> inspectorRequestMapping: aBuilder [
 
@@ -31,7 +44,7 @@ MCPLogEntry class >> inspectorRequestMapping: aBuilder [
 
 	| logger rows |
 	logger := MCPLogger new.
-	rows := self subclasses asSortedCollection: [ :a :b | a name < b name ].
+	rows := self entryClasses asSortedCollection: [ :a :b | a name < b name ].
 	rows := rows asOrderedCollection collect: [ :each |
 		| method chosen |
 		method := (each class includesSelector: #toolName)
@@ -55,7 +68,7 @@ MCPLogEntry class >> inspectorRequestMappingContext: aContext [
 
 	"The mapping is a rule the whole hierarchy keeps, so only the root shows it."
 
-	aContext active: self = MCPLogEntry
+	aContext active: self superclass = Object
 ]
 
 { #category : 'instance creation' }

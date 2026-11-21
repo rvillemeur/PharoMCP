@@ -74,15 +74,16 @@ MCPPharoToolsExtendedTest >> testCompileMethodToolRegistered [
 
 { #category : 'tests' }
 MCPPharoToolsExtendedTest >> testCompileMethodToolSuccess [
-	| r |
-	r := self call: 'compile_method' args: (Dictionary new
-		at: 'class_name' put: 'MCPPharoToolsExtendedTest';
+
+	| result |
+	result := self call: 'compile_method' args: (Dictionary new
+		at: 'class_name' put: self class name;
 		at: 'source' put: 'extendedTestCanary ^ 123';
 		at: 'protocol' put: 'private';
 		yourself).
-	self assert: (r beginsWith: 'Compiled:').
-	self assert: (MCPPharoToolsExtendedTest new extendedTestCanary = 123).
-	MCPPharoToolsExtendedTest removeSelector: #extendedTestCanary
+	self assert: (result beginsWith: 'Compiled:').
+	self assert: self class new extendedTestCanary equals: 123.
+	self class removeSelector: #extendedTestCanary
 ]
 
 { #category : 'tests' }
@@ -137,14 +138,15 @@ MCPPharoToolsExtendedTest >> testDeleteMethodToolRegistered [
 
 { #category : 'tests' }
 MCPPharoToolsExtendedTest >> testDeleteMethodToolSuccess [
-	| r |
-	MCPPharoToolsExtendedTest compile: 'extendedDeleteCanary ^ 0' classified: 'private'.
-	r := self call: 'delete_method' args: (Dictionary new
-		at: 'class_name' put: 'MCPPharoToolsExtendedTest';
+
+	| result |
+	self class compile: 'extendedDeleteCanary ^ 0' classified: 'private'.
+	result := self call: 'delete_method' args: (Dictionary new
+		at: 'class_name' put: self class name;
 		at: 'selector' put: 'extendedDeleteCanary';
 		yourself).
-	self assert: (r beginsWith: 'Deleted:').
-	self deny: (MCPPharoToolsExtendedTest includesSelector: #extendedDeleteCanary)
+	self assert: (result beginsWith: 'Deleted:').
+	self deny: (self class includesSelector: #extendedDeleteCanary)
 ]
 
 { #category : 'tests' }
