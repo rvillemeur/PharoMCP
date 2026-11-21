@@ -655,3 +655,69 @@ optional:
 - `evaluate_pharo` has no time limit. A runaway expression blocks a local developer who can
   see the image and press the interrupt key; it blocks a remote one with no way in.
 - A dropped connection is only detected on write. Local clients never exercise it.
+
+---
+
+## Phase 10 — the MCPTool paths every call walks, pinned
+
+Phase 7.2 measured `MCPTool` at a mutation score of 36 and left it there. It was the lowest in
+the project, and unlike the tool classes the alive mutants were not description prose:
+`asDictionary` builds the `tools/list` payload, the four schema builders build every input and
+output schema, the annotation hints tell a client whether to ask its user before calling, and
+the three inspector views are what a reader of this code sees. Nine tests covered all of it.
+
+### 10.1 Eighteen tests, and a mutation score of 63
+
+- Change: `MCPToolTest` goes from nine tests to twenty-seven. They pin the exact key set of the
+  payload with every optional field set and with each field set alone, since three separate
+  guards answer for them; each schema builder by its keys and its values; the `side` property,
+  whose enum order a client reads as the default; the four annotation flags read back one at a
+  time, so a builder answering one flag in another flag's place does not pass; the three hint
+  sets and the three shortcuts that install them; `answersStructuredContent:`, which needs both
+  an output schema and a dictionary result; and the three views.
+- The views are testable without opening a window: `SpPresenterBuilder newApplication:
+  SpApplication new` answers the builder the inspector passes, and the presenter it builds can
+  be read — the table's column titles, its items and the value each column evaluates for a
+  given row. `MCPTool class >> inspectorToolClasses:` went from 76 alive mutants to a handful
+  this way.
+- One trap worth keeping: MuTalk runs a mutant only against the tests its coverage analysis saw
+  execute the mutated method. A test that read a view's `inspectorPresentationOrder:title:`
+  pragma without building the view therefore killed nothing, and a changed tab title or order
+  stayed alive. The test now builds each view first and reads the pragma after.
+- **Done**, commit `8d7d259`. Score 42 to 63 over 761 mutants. 359 tests pass, critics clean on
+  `MCPToolTest`, and the mutation runs left no class behind and no production method modified —
+  the `tearDown` of Phase 8.1 doing its work.
+
+### 10.2 Why 63 and not more
+
+Of the 276 mutants still alive, **259 are `MTSubclassReplacementOperator`** replacing
+`Dictionary new` with a subclass of `Dictionary`: `PluggableDictionary`, `WeakKeyDictionary`,
+`IdentityDictionary` and the rest. Every one of them behaves identically for the string keys a
+schema uses, so no honest test kills them — the test that would asserts the class of a
+dictionary, which pins an implementation detail rather than a fact. Each `Dictionary new` in a
+method spawns about 25 of them, which is why `schemaArrayOfMessagesDescribedAs:`, with three,
+carries 86 alive on its own.
+
+So the ceiling for this class is 65, not 100, and the score sits two points under it. The
+seventeen remaining mutants were each read and left deliberately:
+
+- six `MTRemoveCaretOperator` on `readOnly`, `destructive`, `additive`,
+  `readOnlyHint:destructiveHint:idempotentHint:` and `missingRequiredArgumentsIn:`. Removing the
+  caret answers `self`, and in each case `self` is what the method already answers, because the
+  setter it delegates to answers the receiver. Equivalent mutants.
+- three on `requiredArgumentsOf:`, which drop the sort or the `ifAbsent:` block. Every tool
+  schema in the project already lists its required names in alphabetical order, so the sort
+  changes nothing for the live data. Killing them needs a tool class whose required list is
+  unsorted, and the only way to get one is a stub subclass of `MCPTool` — which
+  `MCPToolSurfaceTest` would then refuse for living outside the `Tools` tag, and which would
+  show up as a twenty-third row in the production inspector view. Not worth it.
+- six on the two code views: the `syntaxHighlight: false` flag negated or nullified, and a
+  cascade send replaced by `yourself`. `SpCodePresenter` has a `syntaxHighlight` slot and no
+  accessor for it, so asserting the flag means either reaching into an external class's
+  instance variable or adding an extension method to Spec for a cosmetic setting. Neither earns
+  its place for a flag with no behavioural consequence.
+- two `MTLiteralStringChangeOperator` on the two descriptions inside
+  `schemaArrayOfMessagesDescribedAs:`. This is the call Phase 7.2 already made about
+  description prose: killing it means copying the text into a test, where it documents nothing
+  and breaks on every rewording.
+ording.
