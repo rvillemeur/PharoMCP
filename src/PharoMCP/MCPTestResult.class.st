@@ -30,6 +30,30 @@ MCPTestResult >> initialize [
 	errorMessages := OrderedDictionary new
 ]
 
+{ #category : 'inspector' }
+MCPTestResult >> inspectorOutcome: aBuilder [
+
+	<inspectorPresentationOrder: 0 title: 'Outcome'>
+
+	"The counts come from the result itself, and the two message collections are what the
+	 report dictionary carries to a client, so a reader sees exactly what the tool answered."
+
+	^ (StSimpleInspectorBuilder on: aBuilder)
+		key: 'Ran' value: self runCount printString;
+		key: 'Passed' value: self expectedPasses size printString;
+		key: 'Failed' value: self failures size printString;
+		key: 'Errored' value: self errors size printString;
+		key: 'Failure messages' value: (self failureMessages size printString , ' recorded');
+		key: 'Error messages' value: (self errorMessages size printString , ' recorded');
+		key: 'First failure' value: (self failureMessages
+			ifEmpty: [ 'none' ]
+			ifNotEmpty: [ :messages | messages first printString ]);
+		key: 'First error' value: (self errorMessages
+			ifEmpty: [ 'none' ]
+			ifNotEmpty: [ :messages | messages first printString ]);
+		table
+]
+
 { #category : 'running' }
 MCPTestResult >> runCase: aTestCase [
 	| excClasses |

@@ -21,11 +21,59 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'inspector' }
+MCPLogEntry class >> inspectorRequestMapping: aBuilder [
+
+	<inspectorPresentationOrder: 1 title: 'Request mapping'>
+
+	"Each row asks MCPLogger the real question rather than restating the table, so a
+	 subclass whose toolName stops matching shows up here as a row answering MCPLogEntry."
+
+	| logger rows |
+	logger := MCPLogger new.
+	rows := self subclasses asSortedCollection: [ :a :b | a name < b name ].
+	rows := rows asOrderedCollection collect: [ :each |
+		| method chosen |
+		method := (each class includesSelector: #toolName)
+			ifTrue: [ each toolName ]
+			ifFalse: [ 'notifications/initialized' ].
+		chosen := logger entryClassForRequest: (self requestJsonForMethod: method).
+		each -> chosen ].
+	^ aBuilder newTable
+		items: rows asArray;
+		addColumn: (SpStringTableColumn title: 'Entry class' evaluated: [ :each | each key name ]);
+		addColumn: (SpStringTableColumn title: 'Request' evaluated: [ :each |
+			(each key class includesSelector: #toolName)
+				ifTrue: [ each key toolName ]
+				ifFalse: [ 'notifications/*' ] ]);
+		addColumn: (SpStringTableColumn title: 'Logger picks' evaluated: [ :each | each value name ]);
+		yourself
+]
+
+{ #category : 'inspector' }
+MCPLogEntry class >> inspectorRequestMappingContext: aContext [
+
+	"The mapping is a rule the whole hierarchy keeps, so only the root shows it."
+
+	aContext active: self = MCPLogEntry
+]
+
 { #category : 'instance creation' }
 MCPLogEntry class >> request: reqJson response: respJson [
 	^ self new
 		initializeFromRequest: reqJson response: respJson;
 		yourself
+]
+
+{ #category : 'inspector' }
+MCPLogEntry class >> requestJsonForMethod: aString [
+
+	"A tool name reaches the logger inside a tools/call request; a bare method name is the
+	 method itself."
+
+	(aString includes: $/) ifTrue: [
+		^ '{"jsonrpc":"2.0","id":1,"method":"' , aString , '"}' ].
+	^ '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"' , aString , '"}}'
 ]
 
 { #category : 'accessing' }

@@ -563,6 +563,40 @@ MCPPharoTools class >> getClassComment: className [
 	^ cls comment
 ]
 
+{ #category : 'inspector' }
+MCPPharoTools class >> hintsDescriptionFor: aTool [
+
+	| annotations hints |
+	annotations := aTool annotations.
+	annotations ifNil: [ ^ '' ].
+	hints := OrderedCollection new.
+	(annotations at: 'readOnlyHint' ifAbsent: [ false ]) ifTrue: [ hints add: 'read only' ].
+	(annotations at: 'destructiveHint' ifAbsent: [ false ]) ifTrue: [ hints add: 'destructive' ].
+	(annotations at: 'idempotentHint' ifAbsent: [ false ]) ifTrue: [ hints add: 'idempotent' ].
+	(annotations at: 'openWorldHint' ifAbsent: [ false ]) ifTrue: [ hints add: 'open world' ].
+	^ ', ' join: hints
+]
+
+{ #category : 'inspector' }
+MCPPharoTools class >> inspectorToolTable: aBuilder [
+
+	<inspectorPresentationOrder: 0 title: 'Tools'>
+
+	"The annotations are read off each tool rather than listed here, so a tool built without
+	 them shows an empty Hints cell instead of a wrong one."
+
+	| tools |
+	tools := (self allTools asSortedCollection: [ :a :b | a name < b name ]) asArray.
+	^ aBuilder newTable
+		items: tools;
+		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :each | each name ]);
+		addColumn: (SpStringTableColumn title: 'Title' evaluated: [ :each | each title ifNil: [ '' ] ]);
+		addColumn: (SpStringTableColumn title: 'Hints' evaluated: [ :each | self hintsDescriptionFor: each ]);
+		addColumn: (SpStringTableColumn title: 'Output schema' evaluated: [ :each |
+			each outputSchema ifNil: [ '' ] ifNotNil: [ 'yes' ] ]);
+		yourself
+]
+
 { #category : 'tools' }
 MCPPharoTools class >> listClassesMatching: pattern [
 	| classes sorted limited header |
