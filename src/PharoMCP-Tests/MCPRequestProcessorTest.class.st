@@ -243,6 +243,27 @@ MCPRequestProcessorTest >> testShortResultIsNotTruncated [
 	self assert: text equals: 'brief'
 ]
 
+{ #category : 'tests - tools/call' }
+MCPRequestProcessorTest >> testStructuredResultCarriesBothContentAndData [
+
+	| result content |
+	processor registerTool: ((MCPTool
+		name: 'counted'
+		description: 'Answers a dictionary'
+		schema: Dictionary new
+		handler: [ :args | Dictionary new at: 'count' put: 3; yourself ])
+			outputSchema: (Dictionary new at: 'type' put: 'object'; yourself);
+			yourself).
+	result := (self parse: (processor processRawRequest: (self request: 'tools/call' id: 1 params: (Dictionary new
+		at: 'name' put: 'counted';
+		at: 'arguments' put: Dictionary new;
+		yourself)))) at: 'result'.
+	self assert: ((result at: 'structuredContent') at: 'count') equals: 3.
+	content := (result at: 'content') first at: 'text'.
+	self assert: (content includesSubstring: '"count"').
+	self deny: (result at: 'isError')
+]
+
 { #category : 'tests' }
 MCPRequestProcessorTest >> testToolCanBeRegisteredAfterInit [
 	| newTool response tools toolNames |

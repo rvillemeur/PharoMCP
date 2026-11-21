@@ -64,6 +64,15 @@ MCPTool >> annotations: aDictionary [
 	annotations := aDictionary
 ]
 
+{ #category : 'testing' }
+MCPTool >> answersStructuredContent: aResult [
+
+	"A tool that declares an outputSchema answers a dictionary when it succeeded, and a plain
+	 string when it has an error to report, which belongs in the text block alone."
+
+	^ outputSchema notNil and: [ aResult isDictionary ]
+]
+
 { #category : 'converting' }
 MCPTool >> asDictionary [
 

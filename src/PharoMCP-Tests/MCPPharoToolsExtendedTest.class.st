@@ -256,10 +256,13 @@ MCPPharoToolsExtendedTest >> testRunCriticsOnUnknownPackage [
 	self assert: (r beginsWith: 'Error'). self assert: (r includesSubstring: 'NoSuchPkgXYZ')
 ]
 
-{ #category : 'tests - run_critics' }
+{ #category : 'tests' }
 MCPPharoToolsExtendedTest >> testRunCriticsOnValidClass [
-	| r | r := self call: 'run_critics' args: (Dictionary new at: 'class_name' put: 'MCPServer'; yourself).
-	self deny: (r beginsWith: 'Error')
+
+	| report |
+	report := self call: 'run_critics' args: (Dictionary new at: 'class_name' put: 'MCPServer'; yourself).
+	self assert: (report at: 'target') equals: 'MCPServer'.
+	self assert: (report at: 'critiques') size equals: (report at: 'critiqueCount')
 ]
 
 { #category : 'tests - run_critics' }

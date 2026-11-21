@@ -138,7 +138,7 @@ MCPRequestProcessor >> handlePing: id [
 { #category : 'handling' }
 MCPRequestProcessor >> handleToolsCall: params id: id [
 
-	| toolName args tool missing resultText isError |
+	| toolName args tool missing |
 	toolName := params at: 'name' ifAbsent: [
 		^ self errorResponseWithId: id code: -32602 message: 'Missing parameter: name' ].
 	args := params at: 'arguments' ifAbsent: [ Dictionary new ].
@@ -147,14 +147,7 @@ MCPRequestProcessor >> handleToolsCall: params id: id [
 	missing := tool missingRequiredArgumentsIn: args.
 	missing ifNotEmpty: [
 		^ self toolErrorResult: (self missingArgumentsMessage: missing) id: id ].
-	isError := false.
-	resultText := [ tool call: args ]
-		on: Error
-		do: [ :e |
-			isError := true.
-			'Error: ' , e messageText ].
-	resultText isString ifFalse: [ resultText := resultText printString ].
-	^ self toolResult: (self truncated: resultText) isError: isError id: id
+	^ self resultOfCalling: tool with: args id: id
 ]
 
 { #category : 'handlers' }
@@ -238,6 +231,25 @@ MCPRequestProcessor >> registerTool: aTool [
 	tools at: aTool name put: aTool
 ]
 
+{ #category : 'private' }
+MCPRequestProcessor >> resultOfCalling: aTool with: arguments id: id [
+
+          | result isError |
+          isError := false.
+          result := [ aTool call: arguments ]
+                  on: Error
+                  do: [ :e |
+                          isError := true.
+                          'Error: ' , e messageText ].
+          (isError not and: [ aTool answersStructuredContent: result ]) ifTrue: [
+                  ^ self
+                          toolResult: (self truncated: (NeoJSONWriter toStringPretty: result))
+                          structured: result
+                          id: id ].
+          result isString ifFalse: [ result := result printString ].
+          ^ self toolResult: (self truncated: result) isError: isError id: id
+]
+
 { #category : 'response building' }
 MCPRequestProcessor >> successResponseWithResult: result id: id [
 	^ NeoJSONWriter toString: (Dictionary new
@@ -263,6 +275,24 @@ MCPRequestProcessor >> toolResult: aString isError: aBoolean id: id [
 				at: 'text' put: aString;
 				yourself));
 			at: 'isError' put: aBoolean;
+			yourself)
+		id: id
+]
+
+{ #category : 'private' }
+MCPRequestProcessor >> toolResult: aString structured: aDictionary id: id [
+
+	"A tool with an outputSchema answers its data in structuredContent, and the specification
+	 asks for the same data serialised in the text block, for a client that reads only text."
+
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'content' put: { Dictionary new
+				at: 'type' put: 'text';
+				at: 'text' put: aString;
+				yourself };
+			at: 'structuredContent' put: aDictionary;
+			at: 'isError' put: false;
 			yourself)
 		id: id
 ]

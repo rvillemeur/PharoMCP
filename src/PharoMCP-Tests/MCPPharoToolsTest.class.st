@@ -68,12 +68,13 @@ MCPPharoToolsTest >> testReadOnlyToolsAreAnnotatedReadOnly [
 			self deny: (tool annotations at: 'destructiveHint') description: each , ' should not be destructive' ]
 ]
 
-{ #category : 'tests - run_tests' }
+{ #category : 'tests' }
 MCPPharoToolsTest >> testRunTestsAllInClass [
-	| result |
-	result := tool call: (Dictionary new at: 'class_name' put: 'MCPToolTest'; yourself).
-	self assert: (result includesSubstring: 'passed').
-	self assert: (result includesSubstring: 'MCPToolTest')
+
+	| report |
+	report := tool call: (Dictionary new at: 'class_name' put: 'MCPToolTest'; yourself).
+	self assert: (report at: 'target') equals: 'MCPToolTest'.
+	self assert: (report at: 'passedCount') equals: (report at: 'runCount')
 ]
 
 { #category : 'tests - run_tests' }
@@ -113,22 +114,25 @@ MCPPharoToolsTest >> testRunTestsPackageNotFound [
 	self assert: (result includesSubstring: 'NoSuchPackageXYZ')
 ]
 
-{ #category : 'tests - run_tests' }
+{ #category : 'tests' }
 MCPPharoToolsTest >> testRunTestsPackageSuccess [
+
 	"Uses a small non-PharoMCP package to avoid recursive suite building"
-	| result |
-	result := tool call: (Dictionary new at: 'package' put: 'Transcript-NonInteractive-Tests'; yourself).
-	self assert: (result includesSubstring: 'Transcript-NonInteractive-Tests').
-	self assert: (result includesSubstring: 'passed')
+
+	| report |
+	report := tool call: (Dictionary new at: 'package' put: 'Transcript-NonInteractive-Tests'; yourself).
+	self assert: (report at: 'target') equals: 'Transcript-NonInteractive-Tests'.
+	self assert: (report at: 'passedCount') equals: (report at: 'runCount')
 ]
 
-{ #category : 'tests - run_tests' }
+{ #category : 'tests' }
 MCPPharoToolsTest >> testRunTestsSingleSelector [
-	| result |
-	result := tool call: (Dictionary new at: 'class_name' put: 'MCPToolTest'; at: 'selector' put: 'testToolCreation'; yourself).
-	self assert: (result includesSubstring: 'MCPToolTest').
-	self assert: (result includesSubstring: 'testToolCreation').
-	self assert: (result includesSubstring: '1 passed')
+
+	| report |
+	report := tool call: (Dictionary new at: 'class_name' put: 'MCPToolTest'; at: 'selector' put: 'testToolCreation'; yourself).
+	self assert: (report at: 'target') equals: 'MCPToolTest'.
+	self assert: (report at: 'selector') equals: 'testToolCreation'.
+	self assert: (report at: 'passedCount') equals: 1
 ]
 
 { #category : 'tests - schema' }

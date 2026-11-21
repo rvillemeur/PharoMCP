@@ -5,6 +5,23 @@ Class {
 	#package : 'PharoMCP-Tests'
 }
 
+{ #category : 'helpers' }
+MCPPharoToolsRunningTest >> assertReport: aReport satisfies: aSchema [
+
+	(aSchema at: 'required') do: [ :key |
+		self assert: (aReport includesKey: key) description: key , ' is required but absent' ].
+	aReport keysAndValuesDo: [ :key :value |
+		| declared |
+		declared := (aSchema at: 'properties') at: key ifAbsent: [ nil ].
+		self deny: declared isNil description: key , ' is emitted but not declared'.
+		(declared at: 'type') = 'integer' ifTrue: [
+			self assert: value isInteger description: key , ' is declared an integer' ].
+		(declared at: 'type') = 'string' ifTrue: [
+			self assert: value isString description: key , ' is declared a string' ].
+		(declared at: 'type') = 'array' ifTrue: [
+			self assert: value isCollection description: key , ' is declared an array' ] ]
+]
+
 { #category : 'private' }
 MCPPharoToolsRunningTest >> tempNewName [ ^ 77
 ]
@@ -608,6 +625,30 @@ MCPPharoToolsRunningTest >> testRenameMethodUnknownSelector [
 	self assert: (result includesSubstring: 'noSuchSelectorXYZ')
 ]
 
+{ #category : 'tests - structured results' }
+MCPPharoToolsRunningTest >> testReportsSatisfyTheirOutputSchemas [
+
+	self
+		assertReport: (MCPPharoTools runTestsForClass: 'MCPToolTest' selector: 'testToolCreation')
+		satisfies: MCPPharoTools runTestsTool outputSchema.
+	self
+		assertReport: (MCPPharoTools runTestsInPackage: 'SUnit-MockObjects-Tests')
+		satisfies: MCPPharoTools runTestsTool outputSchema.
+	self
+		assertReport: (MCPPharoTools runCriticsOnClass: 'MCPPharoTools')
+		satisfies: MCPPharoTools runCriticsTool outputSchema
+]
+
+{ #category : 'tests - structured results' }
+MCPPharoToolsRunningTest >> testRunCriticsAnswersStructuredContent [
+
+	| report |
+	report := MCPPharoTools runCriticsOnClass: 'MCPTool'.
+	self assert: (report at: 'target') equals: 'MCPTool'.
+	self assert: (report at: 'critiqueCount') equals: (report at: 'critiques') size.
+	self assert: ((report at: 'summary') isString)
+]
+
 { #category : 'tests - runCritics' }
 MCPPharoToolsRunningTest >> testRunCriticsOnClassUnknown [
 	| r |
@@ -616,11 +657,13 @@ MCPPharoToolsRunningTest >> testRunCriticsOnClassUnknown [
 	self assert: (r includesSubstring: 'NoSuchClassXYZ')
 ]
 
-{ #category : 'tests - runCritics' }
+{ #category : 'tests - running' }
 MCPPharoToolsRunningTest >> testRunCriticsOnClassValid [
-	| r |
-	r := MCPPharoTools runCriticsOnClass: 'MCPServer'.
-	self deny: (r beginsWith: 'Error')
+
+	| report |
+	report := MCPPharoTools runCriticsOnClass: 'MCPServer'.
+	self assert: (report at: 'target') equals: 'MCPServer'.
+	self assert: (report at: 'critiques') size equals: (report at: 'critiqueCount')
 ]
 
 { #category : 'tests - runCritics' }
@@ -631,19 +674,37 @@ MCPPharoToolsRunningTest >> testRunCriticsOnPackageUnknown [
 	self assert: (r includesSubstring: 'NoSuchPkgXYZ')
 ]
 
-{ #category : 'tests - runTests' }
-MCPPharoToolsRunningTest >> testRunTestsForClassAllTests [
-	| r |
-	r := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: nil.
-	self assert: (r includesSubstring: 'passed').
-	self assert: (r includesSubstring: 'MCPToolTest')
+{ #category : 'tests - structured results' }
+MCPPharoToolsRunningTest >> testRunTestsAnswersStructuredContent [
+
+	| report |
+	report := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: nil.
+	self assert: (report at: 'target') equals: 'MCPToolTest'.
+	self assert: (report at: 'runCount') equals: MCPToolTest buildSuite tests size.
+	self assert: (report at: 'passedCount') equals: (report at: 'runCount').
+	self assert: (report at: 'failedCount') equals: 0.
+	self assert: (report at: 'erroredCount') equals: 0.
+	self assert: (report at: 'durationMilliseconds') isNumber.
+	self assert: (report at: 'failures') isEmpty.
+	self assert: ((report at: 'summary') includesSubstring: 'passed')
 ]
 
-{ #category : 'tests - runTests' }
+{ #category : 'tests - running' }
+MCPPharoToolsRunningTest >> testRunTestsForClassAllTests [
+
+	| report |
+	report := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: nil.
+	self assert: (report at: 'target') equals: 'MCPToolTest'.
+	self assert: (report at: 'passedCount') equals: (report at: 'runCount')
+]
+
+{ #category : 'tests - running' }
 MCPPharoToolsRunningTest >> testRunTestsForClassIncludesDuration [
-	| r |
-	r := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: nil.
-	self assert: (r includesSubstring: 'ms')
+
+	| report |
+	report := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: nil.
+	self assert: (report at: 'durationMilliseconds') isInteger.
+	self assert: ((report at: 'summary') includesSubstring: 'ms')
 ]
 
 { #category : 'tests - runTests' }
@@ -654,13 +715,15 @@ MCPPharoToolsRunningTest >> testRunTestsForClassNonTestCase [
 	self assert: (r includesSubstring: 'OrderedCollection')
 ]
 
-{ #category : 'tests - runTests' }
+{ #category : 'tests - running' }
 MCPPharoToolsRunningTest >> testRunTestsForClassSingleSelector [
-	| r |
-	r := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: 'testToolCreation'.
-	self assert: (r includesSubstring: 'MCPToolTest').
-	self assert: (r includesSubstring: 'testToolCreation').
-	self assert: (r includesSubstring: '1 passed')
+
+	| report |
+	report := MCPPharoTools runTestsForClass: 'MCPToolTest' selector: 'testToolCreation'.
+	self assert: (report at: 'target') equals: 'MCPToolTest'.
+	self assert: (report at: 'selector') equals: 'testToolCreation'.
+	self assert: (report at: 'runCount') equals: 1.
+	self assert: (report at: 'passedCount') equals: 1
 ]
 
 { #category : 'tests - runTests' }
@@ -671,11 +734,13 @@ MCPPharoToolsRunningTest >> testRunTestsForClassUnknownClass [
 	self assert: (r includesSubstring: 'NoSuchClassXYZ')
 ]
 
-{ #category : 'tests - runTests' }
+{ #category : 'tests - running' }
 MCPPharoToolsRunningTest >> testRunTestsInPackageIncludesDuration [
-	| r |
-	r := MCPPharoTools runTestsInPackage: 'SUnit-MockObjects-Tests'.
-	self assert: (r includesSubstring: 'ms')
+
+	| report |
+	report := MCPPharoTools runTestsInPackage: 'SUnit-MockObjects-Tests'.
+	self assert: (report at: 'durationMilliseconds') isInteger.
+	self assert: ((report at: 'summary') includesSubstring: 'ms')
 ]
 
 { #category : 'tests - runTests' }
@@ -685,11 +750,13 @@ MCPPharoToolsRunningTest >> testRunTestsInPackageNoTestCases [
 	self assert: (r beginsWith: 'Error')
 ]
 
-{ #category : 'tests - runTests' }
+{ #category : 'tests - running' }
 MCPPharoToolsRunningTest >> testRunTestsInPackageSuccess [
-	| r |
-	r := MCPPharoTools runTestsInPackage: 'SUnit-MockObjects-Tests'.
-	self assert: (r includesSubstring: 'passed')
+
+	| report |
+	report := MCPPharoTools runTestsInPackage: 'SUnit-MockObjects-Tests'.
+	self assert: (report at: 'target') equals: 'SUnit-MockObjects-Tests'.
+	self assert: (report at: 'passedCount') equals: (report at: 'runCount')
 ]
 
 { #category : 'tests - runTests' }

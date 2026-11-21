@@ -297,6 +297,66 @@ MCPPharoTools class >> createPackageTool [
 		yourself
 ]
 
+{ #category : 'tools - critics' }
+MCPPharoTools class >> critiqueDictionaryFor: aCritique [
+
+	| dictionary |
+	dictionary := Dictionary new
+		at: 'rule' put: aCritique rule class name;
+		at: 'title' put: aCritique title;
+		yourself.
+	aCritique sourceAnchor ifNotNil: [ :anchor |
+		dictionary
+			at: 'entity'
+			put: ([ anchor entity printString ]
+				on: Error
+				do: [ :e | 'unresolved anchor: ' , e messageText ]) ].
+	^ dictionary
+]
+
+{ #category : 'tools - critics' }
+MCPPharoTools class >> critiqueReportFor: critiques name: targetName [
+
+	| shown |
+	shown := critiques size > self maximumCritiquesShown
+		ifTrue: [ critiques first: self maximumCritiquesShown ]
+		ifFalse: [ critiques ].
+	^ Dictionary new
+		at: 'target' put: targetName;
+		at: 'critiqueCount' put: shown size;
+		at: 'totalCritiqueCount' put: critiques size;
+		at: 'critiques' put: (shown collect: [ :each | self critiqueDictionaryFor: each ]) asArray;
+		at: 'summary' put: (self formatCritiques: critiques forName: targetName);
+		yourself
+]
+
+{ #category : 'tools - critics' }
+MCPPharoTools class >> critiqueReportSchema [
+
+	^ Dictionary new
+		at: 'type' put: 'object';
+		at: 'properties' put: (Dictionary new
+			at: 'target' put: (self schemaPropertyOfType: 'string' describedAs: 'Class or package the critics were run on');
+			at: 'critiqueCount' put: (self schemaPropertyOfType: 'integer' describedAs: 'Critiques listed');
+			at: 'totalCritiqueCount' put: (self schemaPropertyOfType: 'integer' describedAs: 'Critiques found, which is larger when the list was cut');
+			at: 'critiques' put: (Dictionary new
+				at: 'type' put: 'array';
+				at: 'description' put: 'One entry per critique';
+				at: 'items' put: (Dictionary new
+					at: 'type' put: 'object';
+					at: 'properties' put: (Dictionary new
+						at: 'rule' put: (self schemaPropertyOfType: 'string' describedAs: 'Name of the Renraku rule class');
+						at: 'title' put: (self schemaPropertyOfType: 'string' describedAs: 'What the rule reports');
+						at: 'entity' put: (self schemaPropertyOfType: 'string' describedAs: 'The class or method the critique is about');
+						yourself);
+					yourself);
+				yourself);
+			at: 'summary' put: (self schemaPropertyOfType: 'string' describedAs: 'The same report as human readable text');
+			yourself);
+		at: 'required' put: #( 'target' 'critiqueCount' 'totalCritiqueCount' 'critiques' 'summary' );
+		yourself
+]
+
 { #category : 'running' }
 MCPPharoTools class >> deleteMethod: selector fromClass: className side: side [
 	| cls target |
@@ -444,21 +504,22 @@ MCPPharoTools class >> findSendersTool [
 
 { #category : 'running' }
 MCPPharoTools class >> formatCritiques: critiques forName: targetName [
+
 	| limited |
 	critiques isEmpty ifTrue: [ ^ 'No critiques found for: ' , targetName ].
-	limited := critiques size > 200
-		ifTrue: [ critiques first: 200 ]
+	limited := critiques size > self maximumCritiquesShown
+		ifTrue: [ critiques first: self maximumCritiquesShown ]
 		ifFalse: [ critiques ].
 	^ String streamContents: [ :s |
-		critiques size > 200 ifTrue: [
-			s << 'Showing first 200 of '; print: critiques size; << ' critiques';
+		limited size < critiques size ifTrue: [
+			s << 'Showing first '; print: limited size; << ' of '; print: critiques size; << ' critiques';
 			nextPut: Character lf; nextPut: Character lf ].
 		limited do: [ :c |
-			s << '['; << c rule class name; << '] '; << c title.
-			c sourceAnchor ifNotNil: [ :a |
-				| entity |
-				entity := [ a entity ] on: Error do: [ :e | nil ].
-				entity ifNotNil: [ s << ' ('; << entity printString; << ')' ] ].
+			| dictionary |
+			dictionary := self critiqueDictionaryFor: c.
+			s << '['; << (dictionary at: 'rule'); << '] '; << (dictionary at: 'title').
+			(dictionary at: 'entity' ifAbsent: [ nil ]) ifNotNil: [ :entity |
+				s << ' ('; << entity; << ')' ].
 			s nextPut: Character lf ] ]
 ]
 
@@ -637,6 +698,25 @@ MCPPharoTools class >> listPackagesTool [
 		title: 'List packages';
 		readOnly;
 		yourself
+]
+
+{ #category : 'accessing' }
+MCPPharoTools class >> maximumCritiquesShown [
+
+	"Critiques beyond this count are summarised rather than listed: a package can raise
+	 thousands, and a client pays for each one in its context window."
+
+	^ 200
+]
+
+{ #category : 'tools - testing' }
+MCPPharoTools class >> messageDictionariesFrom: aDictionary [
+
+	^ aDictionary associations collect: [ :each |
+		Dictionary new
+			at: 'selector' put: each key;
+			at: 'message' put: each value;
+			yourself ]
 ]
 
 { #category : 'tools - methods' }
@@ -938,21 +1018,41 @@ MCPPharoTools class >> renameMethodTool [
 		yourself
 ]
 
+{ #category : 'tools - testing' }
+MCPPharoTools class >> reportFor: result name: targetName selector: selector duration: ms [
+
+	| report |
+	report := Dictionary new
+		at: 'target' put: targetName;
+		at: 'runCount' put: result runCount;
+		at: 'passedCount' put: result passedCount;
+		at: 'failedCount' put: result unexpectedFailureCount;
+		at: 'erroredCount' put: result unexpectedErrorCount;
+		at: 'durationMilliseconds' put: ms;
+		at: 'failures' put: (self messageDictionariesFrom: result failureMessages);
+		at: 'errors' put: (self messageDictionariesFrom: result errorMessages);
+		at: 'summary' put: (self formatResult: result forName: targetName selector: selector duration: ms);
+		yourself.
+	selector ifNotNil: [ :sel | report at: 'selector' put: sel ].
+	^ report
+]
+
 { #category : 'running' }
 MCPPharoTools class >> runCriticsOnClass: className [
-	| cls critiques |
+
+	| cls |
 	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
-	critiques := self collectCritiquesForClass: cls.
-	^ self formatCritiques: critiques forName: className
+	^ self critiqueReportFor: (self collectCritiquesForClass: cls) name: className
 ]
 
 { #category : 'running' }
 MCPPharoTools class >> runCriticsOnPackage: packageName [
+
 	| pkg critiques |
 	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
 	critiques := OrderedCollection new.
 	pkg classes do: [ :cls | critiques addAll: (self collectCritiquesForClass: cls) ].
-	^ self formatCritiques: critiques forName: packageName
+	^ self critiqueReportFor: critiques name: packageName
 ]
 
 { #category : 'tools' }
@@ -976,12 +1076,14 @@ MCPPharoTools class >> runCriticsTool [
 			ifNil: [ cls ifNil: [ 'Error: provide class_name or package' ]
 				ifNotNil: [ MCPPharoTools runCriticsOnClass: cls ] ] ])
 		title: 'Run the code critics';
+		outputSchema: self critiqueReportSchema;
 		readOnly;
 		yourself
 ]
 
 { #category : 'running' }
 MCPPharoTools class >> runTestsForClass: className selector: selector [
+
 	| cls suite result ms |
 	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
 	(cls inheritsFrom: TestCase) ifFalse: [
@@ -994,11 +1096,12 @@ MCPPharoTools class >> runTestsForClass: className selector: selector [
 				yourself ].
 	result := MCPTestResult new.
 	ms := Time millisecondsToRun: [ suite run: result ].
-	^ self formatResult: result forName: className selector: selector duration: ms
+	^ self reportFor: result name: className selector: selector duration: ms
 ]
 
 { #category : 'running' }
 MCPPharoTools class >> runTestsInPackage: packageName [
+
 	| pkg classes suite result ms |
 	pkg := Smalltalk packageOrganizer packageNamed: packageName ifAbsent: [ ^ 'Error: package not found: ' , packageName ].
 	classes := pkg classes select: [ :c | c inheritsFrom: TestCase ].
@@ -1007,7 +1110,7 @@ MCPPharoTools class >> runTestsInPackage: packageName [
 	classes do: [ :c | c suite tests do: [ :t | suite addTest: t ] ].
 	result := MCPTestResult new.
 	ms := Time millisecondsToRun: [ suite run: result ].
-	^ self formatResult: result forName: packageName selector: nil duration: ms
+	^ self reportFor: result name: packageName selector: nil duration: ms
 ]
 
 { #category : 'tools' }
@@ -1036,7 +1139,33 @@ MCPPharoTools class >> runTestsTool [
 						ifNil: [ 'Error: provide class_name or package' ]
 						ifNotNil: [ MCPPharoTools runTestsForClass: className selector: selector ] ] ])
 		title: 'Run tests';
+		outputSchema: self testReportSchema;
 		additive;
+		yourself
+]
+
+{ #category : 'tools - schemas' }
+MCPPharoTools class >> schemaArrayOfMessagesDescribedAs: aDescription [
+
+	^ Dictionary new
+		at: 'type' put: 'array';
+		at: 'description' put: aDescription;
+		at: 'items' put: (Dictionary new
+			at: 'type' put: 'object';
+			at: 'properties' put: (Dictionary new
+				at: 'selector' put: (self schemaPropertyOfType: 'string' describedAs: 'Test method selector');
+				at: 'message' put: (self schemaPropertyOfType: 'string' describedAs: 'What the test reported');
+				yourself);
+			yourself);
+		yourself
+]
+
+{ #category : 'tools - schemas' }
+MCPPharoTools class >> schemaPropertyOfType: aTypeName describedAs: aDescription [
+
+	^ Dictionary new
+		at: 'type' put: aTypeName;
+		at: 'description' put: aDescription;
 		yourself
 ]
 
@@ -1123,6 +1252,27 @@ MCPPharoTools class >> setClassComment: comment onClass: className [
 	cls := Smalltalk globals at: className asSymbol ifAbsent: [ ^ 'Error: class not found: ' , className ].
 	cls comment: comment.
 	^ 'Comment set on: ' , className
+]
+
+{ #category : 'tools - testing' }
+MCPPharoTools class >> testReportSchema [
+
+	^ Dictionary new
+		at: 'type' put: 'object';
+		at: 'properties' put: (Dictionary new
+			at: 'target' put: (self schemaPropertyOfType: 'string' describedAs: 'Class or package the tests were run for');
+			at: 'selector' put: (self schemaPropertyOfType: 'string' describedAs: 'The one test method run, absent when all were run');
+			at: 'runCount' put: (self schemaPropertyOfType: 'integer' describedAs: 'Tests run');
+			at: 'passedCount' put: (self schemaPropertyOfType: 'integer' describedAs: 'Tests that passed');
+			at: 'failedCount' put: (self schemaPropertyOfType: 'integer' describedAs: 'Tests that failed an assertion');
+			at: 'erroredCount' put: (self schemaPropertyOfType: 'integer' describedAs: 'Tests that raised an error');
+			at: 'durationMilliseconds' put: (self schemaPropertyOfType: 'integer' describedAs: 'Milliseconds the suite took');
+			at: 'failures' put: (self schemaArrayOfMessagesDescribedAs: 'One entry per failed test');
+			at: 'errors' put: (self schemaArrayOfMessagesDescribedAs: 'One entry per errored test');
+			at: 'summary' put: (self schemaPropertyOfType: 'string' describedAs: 'The same report as human readable text');
+			yourself);
+		at: 'required' put: #( 'target' 'runCount' 'passedCount' 'failedCount' 'erroredCount' 'summary' );
+		yourself
 ]
 
 { #category : 'private' }
