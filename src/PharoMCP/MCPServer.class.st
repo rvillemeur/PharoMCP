@@ -25,7 +25,8 @@ Class {
 		'port',
 		'processor',
 		'announcer',
-		'logger'
+		'logger',
+		'bindingAddress'
 	],
 	#category : 'PharoMCP-Core',
 	#package : 'PharoMCP',
@@ -52,6 +53,17 @@ MCPServer class >> current [
 { #category : 'instance creation' }
 MCPServer class >> default [
 	^ self onPort: 7777
+]
+
+{ #category : 'accessing' }
+MCPServer class >> loopbackAddress [
+
+	"The MCP specification says a local HTTP server SHOULD bind to 127.0.0.1 only. This image
+	 cannot make that the default: the command-line client runs in a container and reaches the
+	 image through host.docker.internal, which is not the loopback interface. An image serving
+	 only clients on this machine sends bindLoopbackOnly before start."
+
+	^ #[ 127 0 0 1 ]
 ]
 
 { #category : 'instance creation' }
@@ -83,6 +95,34 @@ MCPServer >> addCorsHeadersTo: aResponse origin: anOriginOrNil [
 { #category : 'accessing' }
 MCPServer >> announcer [
 	^ announcer
+]
+
+{ #category : 'accessing' }
+MCPServer >> bindLoopbackOnly [
+
+	^ self bindingAddress: self class loopbackAddress
+]
+
+{ #category : 'accessing' }
+MCPServer >> bindingAddress [
+
+	^ bindingAddress
+]
+
+{ #category : 'accessing' }
+MCPServer >> bindingAddress: aByteArrayOrNil [
+
+	"nil binds every interface, which is what an image reached from a container needs."
+
+	bindingAddress := aByteArrayOrNil
+]
+
+{ #category : 'accessing' }
+MCPServer >> bindingDescription [
+
+	^ bindingAddress
+		ifNil: [ 'every interface' ]
+		ifNotNil: [ :address | '.' join: (address asArray collect: [ :each | each printString ]) ]
 ]
 
 { #category : 'private' }
@@ -181,6 +221,7 @@ MCPServer >> inspectionStatus: aBuilder [
 		key: 'Running' value: self isRunning printString;
 		key: 'Tools' value: (processor ifNil: [ '0' ] ifNotNil: [ :p | p tools size printString ]);
 		key: 'Logger' value: logger class name;
+		key: 'Binding' value: self bindingDescription;
 		key: 'Allowed origins' value: (', ' join: self class allowedOriginPrefixes);
 		key: 'Foreign origin' value: (self isOriginAllowed: 'https://evil.example') printString;
 		table
@@ -266,10 +307,12 @@ MCPServer >> safeProcess: body [
 				yourself) ]
 ]
 
-{ #category : 'control' }
+{ #category : 'controlling' }
 MCPServer >> start [
+
 	self isRunning ifTrue: [ ^ self ].
 	httpServer := ZnServer on: port.
+	bindingAddress ifNotNil: [ :address | httpServer bindingAddress: address ].
 	httpServer delegate: self.
 	httpServer start.
 	Transcript show: 'PharoMCP running on http://localhost:',  port printString; cr.

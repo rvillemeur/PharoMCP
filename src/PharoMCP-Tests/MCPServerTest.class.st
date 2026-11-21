@@ -32,6 +32,27 @@ MCPServerTest >> tearDown [
 	super tearDown
 ]
 
+{ #category : 'tests - binding' }
+MCPServerTest >> testBindLoopbackOnlySetsBindingAddress [
+
+	server bindLoopbackOnly.
+	self assert: server bindingAddress equals: MCPServer loopbackAddress
+]
+
+{ #category : 'tests - binding' }
+MCPServerTest >> testBindingAddressDefaultsToAllInterfaces [
+
+	self assert: server bindingAddress isNil
+]
+
+{ #category : 'tests - binding' }
+MCPServerTest >> testBindingDescriptionNamesTheInterface [
+
+	self assert: server bindingDescription equals: 'every interface'.
+	server bindLoopbackOnly.
+	self assert: server bindingDescription equals: '127.0.0.1'
+]
+
 { #category : 'tests - private' }
 MCPServerTest >> testBuildResponseForNilReturns202EmptyBody [                                             
         | response |                                                                                             
@@ -156,6 +177,21 @@ MCPServerTest >> testLogRequestResponseAbsorbsErrors [
 	logger := MCPNullLogger new.
 	server instVarAt: (MCPServer instVarIndexFor: #logger ifAbsent: [1]) put: logger.
 	self shouldnt: [ server logRequest: '{}' response: nil ] raise: Error
+]
+
+{ #category : 'tests - binding' }
+MCPServerTest >> testLoopbackServerStillServesLocalhost [
+
+	| client body |
+	server bindLoopbackOnly.
+	server start.
+	client := ZnClient new.
+	client url: 'http://localhost:17777/'.
+	client entity: (ZnEntity
+		with: '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+		type: ZnMimeType applicationJson).
+	body := NeoJSONReader fromString: client post.
+	self assert: (body includesKey: 'result')
 ]
 
 { #category : 'tests' }
