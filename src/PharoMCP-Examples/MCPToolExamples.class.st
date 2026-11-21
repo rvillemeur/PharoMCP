@@ -38,3 +38,12 @@ MCPToolExamples class >> toolAnsweringStructuredContent [
 	<sampleInstance>
 	^ MCPPharoTools runTestsTool
 ]
+
+{ #category : 'examples' }
+MCPToolExamples class >> toolWithAlternativeArguments [
+	"search_source takes class_name or package, and answers an error when it gets neither.
+	It is the tool whose execute: branches, so it is the one to inspect."
+
+	<sampleInstance>
+	^ MCPPharoTools searchSourceTool
+]

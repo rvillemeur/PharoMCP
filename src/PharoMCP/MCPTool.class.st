@@ -33,6 +33,23 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'inspector' }
+MCPTool class >> inspectorToolClasses: aBuilder [
+	<inspectorPresentationOrder: 1 title: 'Tool classes'>
+	"Each row is read off the class itself -- its instance's name and schema, and whether it
+	answers its own execute: -- so a tool class that forgets one of them shows an empty cell
+	rather than a wrong one."
+
+	^ aBuilder newTable
+		items: (self subclasses asSortedCollection: [ :a :b | a name < b name ]) asArray;
+		addColumn: (SpStringTableColumn title: 'Class' evaluated: [ :each | each name ]);
+		addColumn: (SpStringTableColumn title: 'Tool' evaluated: [ :each | each new name ]);
+		addColumn: (SpStringTableColumn title: 'Required' evaluated: [ :each | self requiredArgumentsOf: each ]);
+		addColumn: (SpStringTableColumn title: 'Own execute:' evaluated: [ :each | self yesWhen: (each includesSelector: #execute:) ]);
+		addColumn: (SpStringTableColumn title: 'Output schema' evaluated: [ :each | self yesWhen: each new outputSchema notNil ]);
+		yourself
+]
+
 { #category : 'instance creation' }
 MCPTool class >> name: aName description: aDescription schema: aSchema handler: aBlock [
 	^ self new
@@ -41,6 +58,18 @@ MCPTool class >> name: aName description: aDescription schema: aSchema handler: 
 		inputSchema: aSchema;
 		handler: aBlock;
 		yourself
+]
+
+{ #category : 'inspector' }
+MCPTool class >> requiredArgumentsOf: aToolClass [
+	^ ' ' join: ((aToolClass new inputSchema at: 'required' ifAbsent: [ #() ]) asSortedCollection asArray)
+]
+
+{ #category : 'inspector' }
+MCPTool class >> yesWhen: aBoolean [
+	"A table cell says yes or stays empty; a false reads as noise in a column of yeses."
+
+	^ aBoolean ifTrue: [ 'yes' ] ifFalse: [ '' ]
 ]
 
 { #category : 'annotations' }
