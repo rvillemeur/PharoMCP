@@ -523,3 +523,47 @@ it.
   where the project keeps a view that explains a rule the whole hierarchy follows. Every row is
   read off the class itself, so a tool class that forgets one of them shows an empty cell rather
   than a wrong one.
+
+## Phase 8 — the two defects the mutation runs exposed
+
+Phase 7 ran MuTalk twice. Both runs ended with classes left in the image and a dirty checkout,
+which is a defect in the tests rather than an accident of the tool. The first point of this phase
+fixes it. The second clears the magic value the same review found in `listPackagesMatching:`.
+
+### 8.1 A test cleans up in `tearDown`, not on its last line
+
+- Defect: `MCPPharoToolsRunningTest >> testCreateClassNoInstVars` and
+  `MCPPharoToolsExtendedTest >> testCreateClassToolSuccess` created `TestCreateMCPXYZ` and removed
+  it on the last line of the test body. A failure before that line leaks the class into the
+  `PharoMCP-Tests` repository package. The next full suite run then errors with "class already
+  exists", and Iceberg reports the package modified. A mutation run turns this from a theoretical
+  risk into a certainty, because killing an assertion is what it does.
+- Change: a `tearDown` in each of the two classes removes the class if it is present, and the two
+  tests drop their trailing removal. `testCreateClassNoInstVars` also reads the created class out
+  of `Smalltalk globals` instead of naming it, because a test must compile in an image where the
+  class it creates does not yet exist — naming it directly raised
+  `OCUndeclaredVariableNotice` once the leak was cleaned up.
+- The other nine tests in these classes that build a scratch class already wrap the body in
+  `ensure:`, so they were left alone.
+- Done when: planting a failing assertion in `testCreateClassToolSuccess` leaves no
+  `TestCreateMCPXYZ` behind, and the suite stays green.
+- **Done**, commit `f323053`. Verified by compiling a deliberately failing version of the test,
+  running it, reading `Smalltalk globals includesKey: #TestCreateMCPXYZ` — false — and restoring
+  the method. 341 tests pass.
+
+### 8.2 The package cap is a named constant
+
+- Defect: `MCPPharoTools class >> listPackagesMatching:` wrote `200` inline three times and tested
+  `sorted size > 200` twice, which the project rule on magic values forbids, and carried a
+  `ReCyclomaticComplexityRule` critique.
+- Change: `maximumPackagesShown` answers the count, beside the existing `maximumCritiquesShown`;
+  `packagesMatching:` answers the filtered packages, including the nil and empty pattern cases;
+  and the header prints the constant instead of repeating the number.
+- Done when: the output text is unchanged for an absent pattern, an empty pattern, a matching
+  pattern and a pattern that matches nothing, and the critique is gone.
+- **Done**, commit `f323053`. The four cases were evaluated before and after: the header still
+  reads `Showing first 200 of 970 packages`, an empty pattern still answers exactly what a nil
+  pattern answers, and a pattern matching nothing still answers
+  `No packages found matching: ...`. `MCPPharoTools` is down to two critiques, both
+  pre-existing: the method count of `MCPPharoTools class` and the complexity of
+  `searchSource:inMethods:caseSensitive:`.
