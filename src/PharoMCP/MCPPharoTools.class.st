@@ -34,6 +34,7 @@ MCPPharoTools class >> allTools [
 
 { #category : 'tools' }
 MCPPharoTools class >> classCommentTool [
+
 	^ (MCPTool
 		name: 'class_comment'
 		description: 'Get or set the comment (documentation) on a class. Omit the comment parameter to read; supply it to write.'
@@ -53,12 +54,11 @@ MCPPharoTools class >> classCommentTool [
 			yourself)
 		handler: [ :args |
 			| className comment |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			className ifNil: [ 'Error: class_name is required' ] ifNotNil: [
-				comment := args at: 'comment' ifAbsent: [ nil ].
-				comment
-					ifNil: [ self getClassComment: className ]
-					ifNotNil: [ self setClassComment: comment onClass: className ] ] ])
+			className := args at: 'class_name'.
+			comment := args at: 'comment' ifAbsent: [ nil ].
+			comment
+				ifNil: [ self getClassComment: className ]
+				ifNotNil: [ self setClassComment: comment onClass: className ] ])
 		title: 'Read or write a class comment';
 		additive;
 		yourself
@@ -112,6 +112,7 @@ MCPPharoTools class >> classHierarchyOf: className [
 
 { #category : 'tools' }
 MCPPharoTools class >> classHierarchyTool [
+
 	^ (MCPTool
 		name: 'class_hierarchy'
 		description: 'Show superclass chain and direct subclasses of a class.'
@@ -122,11 +123,7 @@ MCPPharoTools class >> classHierarchyTool [
 				yourself);
 			at: 'required' put: #('class_name');
 			yourself)
-		handler: [ :args |
-			| cls |
-			cls := args at: 'class_name' ifAbsent: [ nil ].
-			cls ifNil: [ 'Error: class_name is required' ]
-			ifNotNil: [ self classHierarchyOf: cls ] ])
+		handler: [ :args | self classHierarchyOf: (args at: 'class_name') ])
 		title: 'Show a class hierarchy';
 		readOnly;
 		yourself
@@ -166,6 +163,7 @@ MCPPharoTools class >> compileMethod: source onClass: className side: side class
 
 { #category : 'tools' }
 MCPPharoTools class >> compileMethodTool [
+
 	^ (MCPTool
 		name: 'compile_method'
 		description: 'Compile a method on a class. Returns the selector on success. Use side "class" for class-side methods. LF line endings are normalised automatically.'
@@ -193,14 +191,11 @@ MCPPharoTools class >> compileMethodTool [
 			at: 'required' put: #('class_name' 'source');
 			yourself)
 		handler: [ :args |
-			| className source side protocol |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			source := args at: 'source' ifAbsent: [ nil ].
-			side := args at: 'side' ifAbsent: [ 'instance' ].
-			protocol := args at: 'protocol' ifAbsent: [ 'as yet unclassified' ].
-			(className isNil or: [ source isNil ])
-				ifTrue: [ 'Error: class_name and source are required' ]
-				ifFalse: [ self compileMethod: source onClass: className side: side classified: protocol ] ])
+			self
+				compileMethod: (args at: 'source')
+				onClass: (args at: 'class_name')
+				side: (args at: 'side' ifAbsent: [ 'instance' ])
+				classified: (args at: 'protocol' ifAbsent: [ 'as yet unclassified' ]) ])
 		title: 'Compile a method';
 		additive;
 		yourself
@@ -229,6 +224,7 @@ MCPPharoTools class >> createClass: className superclass: superclsName instanceV
 
 { #category : 'tools' }
 MCPPharoTools class >> createClassTool [
+
 	^ (MCPTool
 		name: 'class_create'
 		description: 'Create a new Pharo class. Fails if the class already exists. Use compile_method to add methods after creation.'
@@ -256,15 +252,11 @@ MCPPharoTools class >> createClassTool [
 			at: 'required' put: #('class_name' 'package');
 			yourself)
 		handler: [ :args |
-			| className superclsName instVars package |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			package := args at: 'package' ifAbsent: [ nil ].
-			(className isNil or: [ package isNil ])
-				ifTrue: [ 'Error: class_name and package are required' ]
-				ifFalse: [
-					superclsName := args at: 'superclass_name' ifAbsent: [ 'Object' ].
-					instVars := args at: 'instance_variables' ifAbsent: [ #() ].
-					self createClass: className superclass: superclsName instanceVariables: instVars package: package ] ])
+			self
+				createClass: (args at: 'class_name')
+				superclass: (args at: 'superclass_name' ifAbsent: [ 'Object' ])
+				instanceVariables: (args at: 'instance_variables' ifAbsent: [ #() ])
+				package: (args at: 'package') ])
 		title: 'Create a class';
 		additive;
 		yourself
@@ -281,6 +273,7 @@ MCPPharoTools class >> createPackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> createPackageTool [
+
 	^ (MCPTool
 		name: 'package_create'
 		description: 'Create a new package in the image. Fails if a package with that name already exists.'
@@ -294,11 +287,7 @@ MCPPharoTools class >> createPackageTool [
 				yourself);
 			at: 'required' put: #('package');
 			yourself)
-		handler: [ :args |
-			| pkg |
-			pkg := args at: 'package' ifAbsent: [ nil ].
-			pkg ifNil: [ 'Error: package is required' ]
-			ifNotNil: [ self createPackage: pkg ] ])
+		handler: [ :args | self createPackage: (args at: 'package') ])
 		title: 'Create a package';
 		additive;
 		yourself
@@ -381,6 +370,7 @@ MCPPharoTools class >> deleteMethod: selector fromClass: className side: side [
 
 { #category : 'tools' }
 MCPPharoTools class >> deleteMethodTool [
+
 	^ (MCPTool
 		name: 'delete_method'
 		description: 'Remove a method from a class. Use side "class" for class-side methods. Cannot be undone — verify the selector before calling.'
@@ -404,13 +394,10 @@ MCPPharoTools class >> deleteMethodTool [
 			at: 'required' put: #('class_name' 'selector');
 			yourself)
 		handler: [ :args |
-			| className selector side |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			selector := args at: 'selector' ifAbsent: [ nil ].
-			side := args at: 'side' ifAbsent: [ 'instance' ].
-			(className isNil or: [ selector isNil ])
-				ifTrue: [ 'Error: class_name and selector are required' ]
-				ifFalse: [ self deleteMethod: selector fromClass: className side: side ] ])
+			self
+				deleteMethod: (args at: 'selector')
+				fromClass: (args at: 'class_name')
+				side: (args at: 'side' ifAbsent: [ 'instance' ]) ])
 		title: 'Delete a method';
 		destructive;
 		yourself
@@ -456,6 +443,7 @@ MCPPharoTools class >> findImplementorsOf: selector [
 
 { #category : 'tools' }
 MCPPharoTools class >> findImplementorsTool [
+
 	^ (MCPTool
 		name: 'find_implementors'
 		description: 'Find all classes that implement a given method selector.'
@@ -466,11 +454,7 @@ MCPPharoTools class >> findImplementorsTool [
 				yourself);
 			at: 'required' put: #('selector');
 			yourself)
-		handler: [ :args |
-			| sel |
-			sel := args at: 'selector' ifAbsent: [ nil ].
-			sel ifNil: [ 'Error: selector is required' ]
-			ifNotNil: [ self findImplementorsOf: sel ] ])
+		handler: [ :args | self findImplementorsOf: (args at: 'selector') ])
 		title: 'Find the implementors of a selector';
 		readOnly;
 		yourself
@@ -494,6 +478,7 @@ MCPPharoTools class >> findSendersOf: selector [
 
 { #category : 'tools' }
 MCPPharoTools class >> findSendersTool [
+
 	^ (MCPTool
 		name: 'find_senders'
 		description: 'Find all methods that send a given message selector. Returns ClassName >> #selector per sender, capped at 100.'
@@ -504,11 +489,7 @@ MCPPharoTools class >> findSendersTool [
 				yourself);
 			at: 'required' put: #('selector');
 			yourself)
-		handler: [ :args |
-			| sel |
-			sel := args at: 'selector' ifAbsent: [ nil ].
-			sel ifNil: [ 'Error: selector is required' ]
-			ifNotNil: [ self findSendersOf: sel ] ])
+		handler: [ :args | self findSendersOf: (args at: 'selector') ])
 		title: 'Find the senders of a selector';
 		readOnly;
 		yourself
@@ -840,6 +821,7 @@ MCPPharoTools class >> moveMethod: selector fromClass: sourceClassName side: sid
 
 { #category : 'tools' }
 MCPPharoTools class >> moveMethodTool [
+
 	^ (MCPTool
 		name: 'method_move'
 		description: 'Move a method from one class to another, preserving source and protocol. Fails if the target class already defines the selector.'
@@ -867,15 +849,11 @@ MCPPharoTools class >> moveMethodTool [
 			at: 'required' put: #('class_name' 'selector' 'target_class');
 			yourself)
 		handler: [ :args |
-			| className selector targetClass side |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			selector := args at: 'selector' ifAbsent: [ nil ].
-			targetClass := args at: 'target_class' ifAbsent: [ nil ].
-			(className isNil or: [ selector isNil or: [ targetClass isNil ] ])
-				ifTrue: [ 'Error: class_name, selector and target_class are required' ]
-				ifFalse: [
-					side := args at: 'side' ifAbsent: [ 'instance' ].
-					self moveMethod: selector fromClass: className side: side toClass: targetClass ] ])
+			self
+				moveMethod: (args at: 'selector')
+				fromClass: (args at: 'class_name')
+				side: (args at: 'side' ifAbsent: [ 'instance' ])
+				toClass: (args at: 'target_class') ])
 		title: 'Move a method to another class';
 		additive;
 		yourself
@@ -900,6 +878,7 @@ MCPPharoTools class >> removeClass: className [
 
 { #category : 'tools' }
 MCPPharoTools class >> removeClassTool [
+
 	^ (MCPTool
 		name: 'class_remove'
 		description: 'Remove a class from the image. Fails if the class has subclasses. Cannot be undone — verify the class name before calling.'
@@ -913,11 +892,7 @@ MCPPharoTools class >> removeClassTool [
 				yourself);
 			at: 'required' put: #('class_name');
 			yourself)
-		handler: [ :args |
-			| className |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			className ifNil: [ 'Error: class_name is required' ]
-			ifNotNil: [ self removeClass: className ] ])
+		handler: [ :args | self removeClass: (args at: 'class_name') ])
 		title: 'Remove a class';
 		destructive;
 		yourself
@@ -937,6 +912,7 @@ MCPPharoTools class >> removePackage: packageName [
 
 { #category : 'tools' }
 MCPPharoTools class >> removePackageTool [
+
 	^ (MCPTool
 		name: 'package_remove'
 		description: 'Remove an empty package from the image. Fails if the package still contains classes — remove or move them first.'
@@ -950,11 +926,7 @@ MCPPharoTools class >> removePackageTool [
 				yourself);
 			at: 'required' put: #('package');
 			yourself)
-		handler: [ :args |
-			| pkg |
-			pkg := args at: 'package' ifAbsent: [ nil ].
-			pkg ifNil: [ 'Error: package is required' ]
-			ifNotNil: [ self removePackage: pkg ] ])
+		handler: [ :args | self removePackage: (args at: 'package') ])
 		title: 'Remove a package';
 		destructive;
 		yourself
@@ -976,6 +948,7 @@ MCPPharoTools class >> renameClass: oldName to: newName [
 
 { #category : 'tools' }
 MCPPharoTools class >> renameClassTool [
+
 	^ (MCPTool
 		name: 'class_rename'
 		description: 'Rename a class in the image. Does not auto-update references in method source — use search_source after renaming to find callers that need updating.'
@@ -994,12 +967,7 @@ MCPPharoTools class >> renameClassTool [
 			at: 'required' put: #('old_name' 'new_name');
 			yourself)
 		handler: [ :args |
-			| oldName newName |
-			oldName := args at: 'old_name' ifAbsent: [ nil ].
-			newName := args at: 'new_name' ifAbsent: [ nil ].
-			(oldName isNil or: [ newName isNil ])
-				ifTrue: [ 'Error: old_name and new_name are required' ]
-				ifFalse: [ self renameClass: oldName to: newName ] ])
+			self renameClass: (args at: 'old_name') to: (args at: 'new_name') ])
 		title: 'Rename a class';
 		additive;
 		yourself
@@ -1033,6 +1001,7 @@ MCPPharoTools class >> renameMethod: oldSelector onClass: className side: side t
 
 { #category : 'tools' }
 MCPPharoTools class >> renameMethodTool [
+
 	^ (MCPTool
 		name: 'method_rename'
 		description: 'Rename a method selector on a class. Rewrites the method source and removes the old selector. Does NOT auto-update senders — use find_senders after renaming to locate callers that need updating.'
@@ -1060,15 +1029,11 @@ MCPPharoTools class >> renameMethodTool [
 			at: 'required' put: #('class_name' 'old_selector' 'new_selector');
 			yourself)
 		handler: [ :args |
-			| className oldSel newSel side |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			oldSel := args at: 'old_selector' ifAbsent: [ nil ].
-			newSel := args at: 'new_selector' ifAbsent: [ nil ].
-			(className isNil or: [ oldSel isNil or: [ newSel isNil ] ])
-				ifTrue: [ 'Error: class_name, old_selector and new_selector are required' ]
-				ifFalse: [
-					side := args at: 'side' ifAbsent: [ 'instance' ].
-					self renameMethod: oldSel onClass: className side: side to: newSel ] ])
+			self
+				renameMethod: (args at: 'old_selector')
+				onClass: (args at: 'class_name')
+				side: (args at: 'side' ifAbsent: [ 'instance' ])
+				to: (args at: 'new_selector') ])
 		title: 'Rename a method';
 		additive;
 		yourself
@@ -1298,8 +1263,7 @@ MCPPharoTools class >> searchSourceTool [
 			yourself)
 		handler: [ :args |
 			| pattern className package cs |
-			pattern := args at: 'pattern' ifAbsent: [
-				MCPToolError signal: 'pattern is required' ].
+			pattern := args at: 'pattern'.
 			className := args at: 'class_name' ifAbsent: [ nil ].
 			package := args at: 'package' ifAbsent: [ nil ].
 			cs := args at: 'case_sensitive' ifAbsent: [ false ].

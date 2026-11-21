@@ -178,6 +178,32 @@ MCPRequestProcessorTest >> testCompletionOfUnknownReferenceIsEmpty [
 	self deny: (completion at: 'hasMore')
 ]
 
+{ #category : 'tests - tools/call' }
+MCPRequestProcessorTest >> testEveryRequiredArgumentIsRejectedBeforeTheHandlerRuns [
+
+	"The guard lives in the processor, once, for every tool. A factory repeating it inside its
+	 own handler block writes code the handler can never reach."
+	| real |
+	real := MCPRequestProcessor new.
+	MCPPharoTools registerToolsWith: real.
+	real tools valuesDo: [ :tool |
+		| required response result |
+		required := tool inputSchema at: 'required' ifAbsent: [ #() ].
+		required ifNotEmpty: [
+			response := real processRawRequest: (self request: 'tools/call' id: 12 params: (Dictionary new
+				at: 'name' put: tool name;
+				at: 'arguments' put: Dictionary new;
+				yourself)).
+			result := (self parse: response) at: 'result'.
+			self
+				assert: (result at: 'isError')
+				description: tool name , ' answered isError false for a call with no arguments'.
+			required do: [ :each |
+				self
+					assert: (((result at: 'content') first at: 'text') includesSubstring: each)
+					description: tool name , ' did not name the missing argument ' , each ] ] ]
+]
+
 { #category : 'tests - tools' }
 MCPRequestProcessorTest >> testEveryToolSaysSoWhenItFails [
 

@@ -18,6 +18,26 @@ MCPPharoToolsExtendedTest >> call: toolName args: argDict [
 ]
 
 { #category : 'running' }
+MCPPharoToolsExtendedTest >> missingArgumentTextOf: toolName args: argDict [
+
+	"The guard a required argument meets lives in the processor, not in the tool's handler, so a
+	 test of it has to go through tools/call."
+	| response result |
+	response := processor processRawRequest: (NeoJSONWriter toString: (Dictionary new
+		at: 'jsonrpc' put: '2.0';
+		at: 'id' put: 1;
+		at: 'method' put: 'tools/call';
+		at: 'params' put: (Dictionary new
+			at: 'name' put: toolName;
+			at: 'arguments' put: argDict;
+			yourself);
+		yourself)).
+	result := (NeoJSONReader fromString: response) at: 'result'.
+	self assert: (result at: 'isError') description: toolName , ' answered isError false'.
+	^ (result at: 'content') first at: 'text'
+]
+
+{ #category : 'running' }
 MCPPharoToolsExtendedTest >> setUp [
 	super setUp.
 	processor := MCPRequestProcessor new.
@@ -26,7 +46,10 @@ MCPPharoToolsExtendedTest >> setUp [
 
 { #category : 'tests - class_hierarchy' }
 MCPPharoToolsExtendedTest >> testClassHierarchyOnMissingClassName [
-	self assert: ((self call: 'class_hierarchy' args: Dictionary new) beginsWith: 'Error')
+
+	self
+		assert: ((self missingArgumentTextOf: 'class_hierarchy' args: Dictionary new)
+			includesSubstring: 'class_name')
 ]
 
 { #category : 'tests - class_hierarchy' }
@@ -66,9 +89,11 @@ MCPPharoToolsExtendedTest >> testClassHierarchyToolRegistered [
 
 { #category : 'tests' }
 MCPPharoToolsExtendedTest >> testCompileMethodToolMissingArgs [
-	| r |
-	r := self call: 'compile_method' args: Dictionary new.
-	self assert: (r beginsWith: 'Error')
+
+	| text |
+	text := self missingArgumentTextOf: 'compile_method' args: Dictionary new.
+	self assert: (text includesSubstring: 'class_name').
+	self assert: (text includesSubstring: 'source')
 ]
 
 { #category : 'tests' }
@@ -105,9 +130,11 @@ MCPPharoToolsExtendedTest >> testCompileMethodToolUnknownClass [
 
 { #category : 'tests' }
 MCPPharoToolsExtendedTest >> testCreateClassToolMissingArgs [
-	| r |
-	r := self call: 'class_create' args: Dictionary new.
-	self assert: (r beginsWith: 'Error')
+
+	| text |
+	text := self missingArgumentTextOf: 'class_create' args: Dictionary new.
+	self assert: (text includesSubstring: 'class_name').
+	self assert: (text includesSubstring: 'package')
 ]
 
 { #category : 'tests' }
@@ -174,7 +201,10 @@ MCPPharoToolsExtendedTest >> testDeleteMethodToolUnknownSelector [
 
 { #category : 'tests - find_implementors' }
 MCPPharoToolsExtendedTest >> testFindImplementorsOnMissingSelector [
-	self assert: ((self call: 'find_implementors' args: Dictionary new) beginsWith: 'Error')
+
+	self
+		assert: ((self missingArgumentTextOf: 'find_implementors' args: Dictionary new)
+			includesSubstring: 'selector')
 ]
 
 { #category : 'tests - find_implementors' }
@@ -208,7 +238,10 @@ MCPPharoToolsExtendedTest >> testFindImplementorsToolRegistered [
 
 { #category : 'tests - find_senders' }
 MCPPharoToolsExtendedTest >> testFindSendersOnMissingSelector [
-	self assert: ((self call: 'find_senders' args: Dictionary new) beginsWith: 'Error')
+
+	self
+		assert: ((self missingArgumentTextOf: 'find_senders' args: Dictionary new)
+			includesSubstring: 'selector')
 ]
 
 { #category : 'tests - find_senders' }
