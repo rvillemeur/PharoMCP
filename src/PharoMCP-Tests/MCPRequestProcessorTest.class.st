@@ -8,14 +8,20 @@ Class {
 	#package : 'PharoMCP-Tests'
 }
 
-{ #category : 'private' }
-MCPRequestProcessorTest >> initializeWithVersion: aStringOrNil [
+{ #category : 'helpers' }
+MCPRequestProcessorTest >> initializeResultWithVersion: aStringOrNil [
 
 	| params response |
 	params := Dictionary new.
 	aStringOrNil ifNotNil: [ :version | params at: 'protocolVersion' put: version ].
 	response := processor processRawRequest: (self request: 'initialize' id: 1 params: params).
-	^ ((self parse: response) at: 'result') at: 'protocolVersion'
+	^ (self parse: response) at: 'result'
+]
+
+{ #category : 'helpers' }
+MCPRequestProcessorTest >> initializeWithVersion: aStringOrNil [
+
+	^ (self initializeResultWithVersion: aStringOrNil) at: 'protocolVersion'
 ]
 
 { #category : 'helpers' }
@@ -72,6 +78,15 @@ MCPRequestProcessorTest >> testInitializeCapabilitiesIncludeTools [
 		(self request: 'initialize' id: 1 params: Dictionary new).
 	result := (self parse: response) at: 'result'.
 	self assert: ((result at: 'capabilities') includesKey: 'tools')
+]
+
+{ #category : 'tests - initialize' }
+MCPRequestProcessorTest >> testInitializeCarriesInstructions [
+
+	| instructions |
+	instructions := (self initializeResultWithVersion: '2025-11-25') at: 'instructions'.
+	self assert: instructions isString.
+	self deny: instructions isEmpty
 ]
 
 { #category : 'tests - initialize' }
@@ -200,6 +215,15 @@ MCPRequestProcessorTest >> testResponseIsValidJson [
 		            (self request: 'tools/list' id: 1 params: Dictionary new).
 	self assert: response isString.
 	NeoJSONReader fromString: response
+]
+
+{ #category : 'tests - initialize' }
+MCPRequestProcessorTest >> testServerInfoCarriesNameAndVersion [
+
+	| serverInfo |
+	serverInfo := (self initializeResultWithVersion: '2025-11-25') at: 'serverInfo'.
+	self assert: (serverInfo at: 'name') equals: MCPRequestProcessor serverName.
+	self assert: (serverInfo at: 'version') equals: MCPRequestProcessor serverVersion
 ]
 
 { #category : 'tests - tools/call' }

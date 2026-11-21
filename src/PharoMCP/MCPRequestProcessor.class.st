@@ -21,6 +21,19 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'accessing - server info' }
+MCPRequestProcessor class >> instructions [
+
+	"Sent once, in the initialize result. A client reads it before it calls a tool, so it
+	 states the rules of this image that a caller cannot discover from a tool schema."
+
+	^ (String cr , String cr) join: #(
+		'This server drives a live Pharo image. The image is the source of truth: change code through compile_method, class_create, delete_method and the other tools, never by writing a .class.st file.'
+		'Pharo source uses CR line endings. A multi-line method body sent to compile_method must separate its lines with CR, never LF; an escape sequence is compiled as its own characters.'
+		'Write the failing test before the code, run it with run_tests, and run run_critics on every class you change before you call the work done.'
+		'evaluate_pharo answers the printString of the last expression. A result longer than the server''s maximum is truncated, and the note states how many characters it held.' )
+]
+
 { #category : 'protocol versions' }
 MCPRequestProcessor class >> latestProtocolVersion [
 
@@ -35,6 +48,25 @@ MCPRequestProcessor class >> maximumResultSize [
 	 answered in full."
 
 	^ 10000
+]
+
+{ #category : 'accessing - server info' }
+MCPRequestProcessor class >> serverName [
+
+	"The name a client shows for this server, and the name the test reads rather than
+	 repeating the literal."
+
+	^ 'PharoMCP'
+]
+
+{ #category : 'accessing - server info' }
+MCPRequestProcessor class >> serverVersion [
+
+	"Neither BaselineOfPharoMCP nor a Pharo package carries a version number, so this method
+	 is the one place the server''s version is written. Raise it when the protocol surface or
+	 the tool set changes, not on every commit."
+
+	^ '1.1.0'
 ]
 
 { #category : 'protocol versions' }
@@ -86,9 +118,10 @@ MCPRequestProcessor >> handleInitialize: params id: id [
 				at: 'tools' put: Dictionary new;
 				yourself);
 			at: 'serverInfo' put: (Dictionary new
-				at: 'name' put: 'PharoMCP';
-				at: 'version' put: '1.0.0';
+				at: 'name' put: self class serverName;
+				at: 'version' put: self class serverVersion;
 				yourself);
+			at: 'instructions' put: self class instructions;
 			yourself)
 		id: id
 ]
