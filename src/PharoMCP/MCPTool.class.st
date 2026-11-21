@@ -23,7 +23,10 @@ Class {
 		'name',
 		'description',
 		'inputSchema',
-		'handler'
+		'handler',
+		'title',
+		'annotations',
+		'outputSchema'
 	],
 	#category : 'PharoMCP-Core',
 	#package : 'PharoMCP',
@@ -40,13 +43,40 @@ MCPTool class >> name: aName description: aDescription schema: aSchema handler: 
 		yourself
 ]
 
+{ #category : 'annotating' }
+MCPTool >> additive [
+
+	"Changes the image but destroys nothing: it adds a class, a method or a package, or it
+	 overwrites one the caller named. Running it twice leaves the same image."
+
+	^ self readOnlyHint: false destructiveHint: false idempotentHint: true
+]
+
+{ #category : 'accessing' }
+MCPTool >> annotations [
+
+	^ annotations
+]
+
+{ #category : 'accessing' }
+MCPTool >> annotations: aDictionary [
+
+	annotations := aDictionary
+]
+
 { #category : 'converting' }
 MCPTool >> asDictionary [
-	^ Dictionary new
+
+	| dictionary |
+	dictionary := Dictionary new
 		at: 'name' put: name;
 		at: 'description' put: description;
 		at: 'inputSchema' put: inputSchema;
-		yourself
+		yourself.
+	title ifNotNil: [ dictionary at: 'title' put: title ].
+	annotations ifNotNil: [ dictionary at: 'annotations' put: annotations ].
+	outputSchema ifNotNil: [ dictionary at: 'outputSchema' put: outputSchema ].
+	^ dictionary
 ]
 
 { #category : 'executing' }
@@ -62,6 +92,14 @@ MCPTool >> description [
 { #category : 'accessing' }
 MCPTool >> description: aString [
 	description := aString
+]
+
+{ #category : 'annotating' }
+MCPTool >> destructive [
+
+	"Removes code from the image, so a client asks its user before it calls the tool."
+
+	^ self readOnlyHint: false destructiveHint: true idempotentHint: false
 ]
 
 { #category : 'accessing' }
@@ -82,6 +120,17 @@ MCPTool >> inputSchema [
 { #category : 'accessing' }
 MCPTool >> inputSchema: aDictionary [
 	inputSchema := aDictionary
+]
+
+{ #category : 'inspector' }
+MCPTool >> inspectionAsSentToClient: aBuilder [
+
+	<inspectorPresentationOrder: 1 title: 'As sent'>
+
+	^ aBuilder newCode
+		syntaxHighlight: false;
+		text: (NeoJSONWriter toStringPretty: self asDictionary);
+		yourself
 ]
 
 { #category : 'inspector' }
@@ -113,4 +162,50 @@ MCPTool >> name [
 { #category : 'accessing' }
 MCPTool >> name: aString [
 	name := aString
+]
+
+{ #category : 'accessing' }
+MCPTool >> outputSchema [
+
+	^ outputSchema
+]
+
+{ #category : 'accessing' }
+MCPTool >> outputSchema: aDictionary [
+
+	outputSchema := aDictionary
+]
+
+{ #category : 'annotating' }
+MCPTool >> readOnly [
+
+	"Reads the image and changes nothing, so a client may call it without asking its user."
+
+	^ self readOnlyHint: true destructiveHint: false idempotentHint: true
+]
+
+{ #category : 'annotating' }
+MCPTool >> readOnlyHint: readOnlyBoolean destructiveHint: destructiveBoolean idempotentHint: idempotentBoolean [
+
+	"openWorldHint is false for every tool of this server: all of them act on the one local
+	 image, none reaches a network or a service whose answer could change on its own."
+
+	^ self annotations: (Dictionary new
+		at: 'readOnlyHint' put: readOnlyBoolean;
+		at: 'destructiveHint' put: destructiveBoolean;
+		at: 'idempotentHint' put: idempotentBoolean;
+		at: 'openWorldHint' put: false;
+		yourself)
+]
+
+{ #category : 'accessing' }
+MCPTool >> title [
+
+	^ title
+]
+
+{ #category : 'accessing' }
+MCPTool >> title: aString [
+
+	title := aString
 ]

@@ -21,6 +21,27 @@ MCPToolTest >> testAsDictionary [
 ]
 
 { #category : 'tests' }
+MCPToolTest >> testAsDictionaryCarriesTitleAndAnnotations [
+
+	| tool dictionary |
+	tool := MCPTool
+		name: 'browse'
+		description: 'Reads the image without changing it'
+		schema: Dictionary new
+		handler: [ :args | 'ok' ].
+	tool
+		title: 'Browse the image';
+		readOnly;
+		outputSchema: (Dictionary new at: 'type' put: 'object'; yourself).
+	dictionary := tool asDictionary.
+	self assert: (dictionary at: 'title') equals: 'Browse the image'.
+	self assert: ((dictionary at: 'annotations') at: 'readOnlyHint').
+	self deny: ((dictionary at: 'annotations') at: 'destructiveHint').
+	self deny: ((dictionary at: 'annotations') at: 'openWorldHint').
+	self assert: ((dictionary at: 'outputSchema') at: 'type') equals: 'object'
+]
+
+{ #category : 'tests' }
 MCPToolTest >> testAsDictionaryHasRequiredKeys [
 	| tool dict |
 	tool := MCPTool
@@ -32,6 +53,18 @@ MCPToolTest >> testAsDictionaryHasRequiredKeys [
 	self assert: (dict includesKey: 'name').
 	self assert: (dict includesKey: 'description').
 	self assert: (dict includesKey: 'inputSchema')
+]
+
+{ #category : 'tests' }
+MCPToolTest >> testAsDictionaryOmitsAbsentOptionalFields [
+
+	| tool |
+	tool := MCPTool
+		name: 'plain'
+		description: 'A tool built the way every existing tool is built'
+		schema: Dictionary new
+		handler: [ :args | 'ok' ].
+	self assert: tool asDictionary keys asSortedCollection asArray equals: #( 'description' 'inputSchema' 'name' )
 ]
 
 { #category : 'tests - validation' }
