@@ -44,6 +44,17 @@ MCPPharoToolsExtendedTest >> setUp [
 	MCPPharoTools registerToolsWith: processor
 ]
 
+{ #category : 'running' }
+MCPPharoToolsExtendedTest >> tearDown [
+	"A test that creates a class and removes it on its last line leaks that class when an
+	earlier assertion fails, and the class lands in a repository package. Remove it here, where
+	a failure cannot skip the removal."
+
+	(Smalltalk globals at: #TestCreateMCPXYZ ifAbsent: [ nil ])
+		ifNotNil: [ :leftover | leftover removeFromSystem ].
+	super tearDown
+]
+
 { #category : 'tests - class_hierarchy' }
 MCPPharoToolsExtendedTest >> testClassHierarchyOnMissingClassName [
 
@@ -150,8 +161,7 @@ MCPPharoToolsExtendedTest >> testCreateClassToolSuccess [
 		at: 'package' put: 'PharoMCP-Tests';
 		yourself).
 	self assert: (r beginsWith: 'Created:').
-	self assert: (Smalltalk globals includesKey: #TestCreateMCPXYZ).
-	Smalltalk globals removeClassNamed: #TestCreateMCPXYZ
+	self assert: (Smalltalk globals includesKey: #TestCreateMCPXYZ)
 ]
 
 { #category : 'tests' }

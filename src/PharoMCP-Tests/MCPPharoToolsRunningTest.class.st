@@ -26,6 +26,17 @@ MCPPharoToolsRunningTest >> assertReport: aReport satisfies: aSchema [
 			self assert: value isCollection description: key , ' is declared an array' ] ]
 ]
 
+{ #category : 'running' }
+MCPPharoToolsRunningTest >> tearDown [
+	"A test that creates a class and removes it on its last line leaks that class when an
+	earlier assertion fails, and the class lands in a repository package. Remove it here, where
+	a failure cannot skip the removal."
+
+	(Smalltalk globals at: #TestCreateMCPXYZ ifAbsent: [ nil ])
+		ifNotNil: [ :leftover | leftover removeFromSystem ].
+	super tearDown
+]
+
 { #category : 'private' }
 MCPPharoToolsRunningTest >> tempNewName [ ^ 77
 ]
@@ -191,13 +202,15 @@ MCPPharoToolsRunningTest >> testCreateClassAlreadyExists [
 			self assert: (e messageText includesSubstring: 'already exists') ]
 ]
 
-{ #category : 'tests - createClass' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testCreateClassNoInstVars [
+	"The class is read out of globals rather than named directly: a test must compile whether or
+	not the class it creates happens to exist in the image."
+
 	| result |
 	result := MCPPharoTools createClass: 'TestCreateMCPXYZ' superclass: 'Object' instanceVariables: #() package: 'PharoMCP-Tests'.
 	self assert: (result beginsWith: 'Created:').
-	self assert: TestCreateMCPXYZ instVarNames isEmpty.
-	Smalltalk globals removeClassNamed: #TestCreateMCPXYZ
+	self assert: (Smalltalk globals at: #TestCreateMCPXYZ) instVarNames isEmpty
 ]
 
 { #category : 'tests - createClass' }

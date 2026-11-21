@@ -413,36 +413,26 @@ MCPPharoTools class >> listMethodsTool [
 	^ MCPListMethodsTool new
 ]
 
-{ #category : 'private' }
+{ #category : 'packages' }
 MCPPharoTools class >> listPackagesMatching: pattern [
-
-	| allPkgs filtered sorted limited |
-	allPkgs := Smalltalk packageOrganizer packages.
-	filtered := pattern ifNil: [ allPkgs ] ifNotNil: [ :pat |
-			            pat isEmpty
-				            ifTrue: [ allPkgs ]
-				            ifFalse: [
-						            allPkgs select: [ :p |
-							            p name asLowercase includesSubstring:
-								            pat asLowercase ] ] ].
-	filtered isEmpty ifTrue: [
-		^ 'No packages found matching: ' , pattern printString ].
-	sorted := filtered asSortedCollection: [ :a :b | a name < b name ].
-	limited := sorted size > 200
-		           ifTrue: [ sorted first: 200 ]
-		           ifFalse: [ sorted ].
-	^ String streamContents: [ :s |
-			  sorted size > 200 ifTrue: [
-					  s
-						  << 'Showing first 200 of ';
-						  print: sorted size;
-						  << ' packages';
-						  nextPut: Character lf;
-						  nextPut: Character lf ].
-			  limited do: [ :p |
-					  s
-						  << (self formatPackageSummary: p);
-						  nextPut: Character lf ] ]
+	| sorted shown |
+	sorted := (self packagesMatching: pattern) asSortedCollection: [ :a :b | a name < b name ].
+	sorted isEmpty ifTrue: [ ^ 'No packages found matching: ' , pattern printString ].
+	shown := sorted first: (sorted size min: self maximumPackagesShown).
+	^ String streamContents: [ :stream |
+		shown size < sorted size ifTrue: [
+			stream
+				<< 'Showing first ';
+				print: shown size;
+				<< ' of ';
+				print: sorted size;
+				<< ' packages';
+				nextPut: Character lf;
+				nextPut: Character lf ].
+		shown do: [ :each |
+			stream
+				<< (self formatPackageSummary: each);
+				nextPut: Character lf ] ]
 ]
 
 { #category : 'tools' }
@@ -456,6 +446,14 @@ MCPPharoTools class >> maximumCritiquesShown [
 
 	"Critiques beyond this count are summarised rather than listed: a package can raise
 	 thousands, and a client pays for each one in its context window."
+
+	^ 200
+]
+
+{ #category : 'constants' }
+MCPPharoTools class >> maximumPackagesShown [
+	"Packages beyond this count are summarised rather than listed, for the same reason as
+	 maximumCritiquesShown: an image carries hundreds and a client pays for each line."
 
 	^ 200
 ]
@@ -524,6 +522,16 @@ MCPPharoTools class >> packageNamed: aString [
 	"The package counterpart of classNamed:, with the same failure the caller reads."
 	^ Smalltalk packageOrganizer packageNamed: aString ifAbsent: [
 		MCPToolError signal: 'package not found: ' , aString ]
+]
+
+{ #category : 'packages' }
+MCPPharoTools class >> packagesMatching: pattern [
+	"A nil or empty pattern answers every package: list_packages takes the pattern as optional."
+
+	| packages |
+	packages := Smalltalk packageOrganizer packages.
+	pattern isEmptyOrNil ifTrue: [ ^ packages ].
+	^ packages select: [ :each | each name asLowercase includesSubstring: pattern asLowercase ]
 ]
 
 { #category : 'registration' }
