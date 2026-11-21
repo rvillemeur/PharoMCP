@@ -2,7 +2,7 @@
 
 MCP (Model Context Protocol) server for Pharo Smalltalk. Runs locally over HTTP, letting Claude interact with a live Pharo image — evaluate code, browse classes, read method source.
 
-**Requires:** Pharo 10 or 11.
+**Requires:** Pharo 13 or later. It was developed on Pharo 13 and runs on Pharo 14 builds. Pharo 10 and 11 are not tested and the inspector views need the presenter builder that Pharo 13 introduced.
 
 ---
 
@@ -70,7 +70,7 @@ MCP (Model Context Protocol) server for Pharo Smalltalk. Runs locally over HTTP,
 
 ### Option A — From GitHub
 
-Push this repository to GitHub, then in a Pharo 10/11 image open a Playground and evaluate:
+Push this repository to GitHub, then in a Pharo 13 or later image open a Playground and evaluate:
 
 ```smalltalk
 Metacello new
@@ -94,16 +94,11 @@ Metacello new
     load.
 ```
 
-### Option C — Manual file-in (quickest for testing)
+### Option C — Manual file-in
 
-In the Pharo image, open a Playground and evaluate each class definition file in order:
-
-1. `src/PharoMCP/MCPTool.class.st`
-2. `src/PharoMCP/MCPRequestProcessor.class.st`
-3. `src/PharoMCP/MCPPharoTools.class.st`
-4. `src/PharoMCP/MCPServer.class.st`
-
-Use `File > File In…` or drag-and-drop onto the image.
+Not supported. Every tool is a class of its own, so the server is more than fifty classes and
+filing in a handful of `.class.st` files leaves an image that cannot answer `tools/list`. Use
+Option A or Option B: both load the baseline, which knows the whole set.
 
 ---
 

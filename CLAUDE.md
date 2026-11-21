@@ -10,10 +10,15 @@ over HTTP, ZnServer delegate pattern.
 - `MCPRequestProcessor` -- routes a JSON-RPC method to a handler. The branches live in
   `MCPRequestProcessor class >> handlerSelectors`, one entry per method, and every handler takes
   the params and the id so the dispatch needs no case analysis.
-- `MCPPharoTools` -- all tool factory methods, class side only. Add a tool: write a factory
-  method and include it in `allTools`.
-- `MCPTool` -- one tool: name, title, description, input schema, annotations, output schema and
-  the handler block.
+- `MCPTool` -- one tool. Every tool of this server is a subclass of it in the `Tools` tag,
+  stating its `name`, `description`, `title`, `inputSchema` and `annotations` as methods, plus an
+  `outputSchema` when it answers structured data. `MCPTool >> call:`, which is all the processor
+  sends, answers by sending `execute:`; a tool built from a block -- what a client registers --
+  answers through the block in `MCPTool >> execute:` itself.
+- `MCPPharoTools` -- class side only: one factory per tool answering an instance of its class, and
+  the helpers the tools call (`classNamed:as:side:` and `packageNamed:` for every lookup,
+  `listMethodsOn:side:`, `searchSource:inMethods:caseSensitive:`, ...). Add a tool: write its
+  `MCPTool` subclass in the `Tools` tag, write the factory, include it in `allTools`.
 - `MCPLogger` / `MCPLogEntry` and its subclasses -- per-request logging with announcements.
   `MCPLogEntry class >> entryClasses` names the subclasses; the logger detects over that list,
   not over `allSubclasses`.
@@ -23,9 +28,9 @@ over HTTP, ZnServer delegate pattern.
 
 | Package | Contents |
 |---|---|
-| `PharoMCP` | Production code, 32 classes |
+| `PharoMCP` | Production code, 55 classes, of which 22 are the tool classes in the `Tools` tag |
 | `PharoMCP-Examples` | One `<Subject>Examples` class per subject, holding the `<sampleInstance>` examples the inspector views and the tests read |
-| `PharoMCP-Tests` | 307 tests over twelve test classes, all pass |
+| `PharoMCP-Tests` | 310 tests over twelve test classes, all pass |
 
 Baseline groups: `default` (the server alone), `examples`, `tests`, `dev` (tests and MuTalk,
 pinned to the release tag `v3.0.8`, never `master`).
@@ -91,12 +96,12 @@ class or build a suite from the concrete classes.
 
 ```smalltalk
 MCPPharoToolsRunningTest suite run.   "91 tests"
-MCPRequestProcessorTest suite run.    "45 tests"
+MCPRequestProcessorTest suite run.    "47 tests"
 MCPPharoToolsExtendedTest suite run.  "39 tests"
 MCPServerTest suite run.              "32 tests"
 MCPLogEntrySubclassTest suite run.    "26 tests"
 MCPLoggerTest suite run.              "16 tests"
-MCPPharoToolsTest suite run.          "15 tests"
+MCPPharoToolsTest suite run.          "16 tests"
 MCPLogEntryTest suite run.            "13 tests"
 MCPConventionTest suite run.          "12 tests"
 MCPToolTest suite run.                 "9 tests"
