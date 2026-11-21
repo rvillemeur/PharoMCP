@@ -292,6 +292,16 @@ Each is optional in the specification. Order is by value to a Pharo client.
 - Change: a `completion/complete` branch and the `completions` capability; completion over
   class names, selectors and package names, which the image answers immediately.
 - Done when: a prefix answers a bounded, sorted list and the capability is declared.
+- **Done.** Three sources keyed by resource-URI prefix — `pharo://class/`,
+  `pharo://package/`, `pharo://selector/` — each a block in
+  `MCPRequestProcessor class >> completionSources`, evaluated on demand because the selector
+  table holds some ninety thousand symbols and a held copy would go stale on the next
+  compile. The answer is sorted, capped at the hundred values the specification allows, and
+  says how many names matched and whether more exist; an unknown reference answers an empty
+  completion rather than an error. Six tests, the example `completionResponse`, the view
+  `inspectionCompletion:`. `dispatchRequest:` had grown a fifth equality test, so the
+  branches moved into `handlerSelectors` and the method performs what it finds there;
+  `handlePing:` became `handlePing:id:` so every handler has one shape.
 
 ### 5.2 `resources`
 
@@ -299,6 +309,20 @@ Each is optional in the specification. Order is by value to a Pharo client.
 - Change: `resources/list` and `resources/read` over `pharo://class/<Name>` and
   `pharo://package/<Name>`; the `resources` capability.
 - Done when: a client can read a class's source without spending a tool call.
+- **Done.** `resources/read` over `pharo://class/<Name>` answers the definition, the class
+  comment and the source of every instance-side and class-side method; over
+  `pharo://package/<Name>` it answers each class of the package with its comment. Both kinds
+  live in `MCPRequestProcessor class >> resourceSources`, one entry carrying the template
+  parameter, the name, the description and the reader block, so a kind cannot be offered as
+  a template and then answer nothing when read; `resources/templates/list` is built from
+  that table. Deviation from this unit as written: `resources/list` answers one resource per
+  package and no class at all, because the image holds fifteen thousand classes and a list
+  of them is neither readable nor useful — a class is reached through its template, so the
+  test is `testResourcesListCarriesEveryPackage` and the classes are held by
+  `testResourceTemplatesCarryClassesAndPackages`. A URI no source claims, and a name no
+  source holds, both answer -32002. Seven tests, the example `resourceReadResponse`, the
+  view `inspectionResources:`. `completionSources` now keys off the same prefix constants,
+  so the two features cannot drift apart on a spelling.
 
 ### 5.3 `prompts`
 
@@ -306,6 +330,15 @@ Each is optional in the specification. Order is by value to a Pharo client.
 - Change: `prompts/list` and `prompts/get`, carrying this image's own workflows: the red,
   green, refactor, example, view cycle; the bug workflow; the design review.
 - Done when: the two methods answer and the capability is declared.
+- **Done.** `red_green_refactor`, `bug_workflow` and `design_review`, each in
+  `MCPRequestProcessor class >> promptTemplates` with its title, description, arguments and
+  template, and each template's text in a method of its own so it reads as prose. Every
+  argument carries a placeholder, which is what the text reads when the client leaves it
+  out, so a prompt asked for with no arguments is still readable and shows no brace to the
+  model that follows it; the arguments are therefore declared not required.
+  `testPromptArgumentsAreDeclaredAndSubstituted` holds the two halves to each other. An
+  unknown name answers -32602. Five tests, the example `promptGetResponse`, the view
+  `inspectionPrompts:`. Suite: 307 tests, all green.
 
 ### Deferred
 
