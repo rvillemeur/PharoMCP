@@ -38,6 +38,31 @@ MCPConventionTest >> projectPackages [
 ]
 
 { #category : 'tests' }
+MCPConventionTest >> testBaselineDeclaresTheExpectedGroups [
+
+	| spec |
+	spec := BaselineOfPharoMCP project version spec.
+	self
+		assert: (spec packages collect: [ :each | each name ]) asSet
+		equals: #( 'PharoMCP' 'PharoMCP-Tests' 'PharoMCP-Examples' ) asSet.
+	self
+		assert: (spec groups collect: [ :each | each name ]) asSet
+		equals: #( 'default' 'tests' 'examples' 'dev' ) asSet
+]
+
+{ #category : 'tests' }
+MCPConventionTest >> testDefaultGroupLoadsNoTestPackage [
+
+	"A client loading the server has no use for the test or example packages, and MuTalk is a
+	 development tool."
+
+	| spec default |
+	spec := BaselineOfPharoMCP project version spec.
+	default := spec groups detect: [ :each | each name = 'default' ].
+	self assert: default includes asSet equals: #( 'PharoMCP' ) asSet
+]
+
+{ #category : 'tests' }
 MCPConventionTest >> testEveryClassCarriesACommentWithoutLineFeeds [
 
 	self projectClasses do: [ :each |
