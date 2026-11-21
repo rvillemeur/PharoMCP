@@ -26,7 +26,8 @@ Class {
 		'processor',
 		'announcer',
 		'logger',
-		'bindingAddress'
+		'bindingAddress',
+		'token'
 	],
 	#category : 'PharoMCP-Core',
 	#package : 'PharoMCP',
@@ -43,6 +44,18 @@ MCPServer class >> allowedOriginPrefixes [
 	 client reaches the image."
 
 	^ #( 'http://localhost' 'http://127.0.0.1' 'http://[::1]' )
+]
+
+{ #category : 'accessing' }
+MCPServer class >> authorizationHeaderName [
+
+	^ 'Authorization'
+]
+
+{ #category : 'accessing' }
+MCPServer class >> bearerPrefix [
+
+	^ 'Bearer '
 ]
 
 { #category : 'instance creation' }
@@ -180,6 +193,7 @@ MCPServer >> handleRequest: request [
 	| origin body result |
 	origin := self originOf: request.
 	(self isOriginAllowed: origin) ifFalse: [ ^ self forbiddenResponse ].
+	(self isAuthorized: request) ifFalse: [ ^ self unauthorizedResponse ].
 	request method = 'OPTIONS' ifTrue: [
 		^ self addCorsHeadersTo: self handleOptionsRequest origin: origin ].
 	request method ~= 'POST' ifTrue: [
@@ -224,6 +238,8 @@ MCPServer >> inspectionStatus: aBuilder [
 		key: 'Binding' value: self bindingDescription;
 		key: 'Allowed origins' value: (', ' join: self class allowedOriginPrefixes);
 		key: 'Foreign origin' value: (self isOriginAllowed: 'https://evil.example') printString;
+		key: 'Token required' value: token notNil printString;
+		key: 'Request without credential' value: (self isAuthorized: ZnRequest empty) printString;
 		table
 ]
 
@@ -233,6 +249,15 @@ MCPServer >> inspectionTools: aBuilder [
 	^ processor
 		ifNil: [ aBuilder newText text: '(server not started)'; yourself ]
 		ifNotNil: [ :p | p inspectionTools: aBuilder ]
+]
+
+{ #category : 'private' }
+MCPServer >> isAuthorized: aRequest [
+
+	| header |
+	token ifNil: [ ^ true ].
+	header := aRequest headers at: self class authorizationHeaderName ifAbsent: [ ^ false ].
+	^ header = (self class bearerPrefix , token)
 ]
 
 { #category : 'testing' }
@@ -292,6 +317,17 @@ MCPServer >> registerTool: aTool [
 	processor registerTool: aTool
 ]
 
+{ #category : 'accessing' }
+MCPServer >> requireToken: aStringOrNil [
+
+	"The MCP specification says a local HTTP server SHOULD authenticate its clients. nil, the
+	 default, requires nothing, because the client this image serves today sends no credential.
+	 The comparison below is a plain string equality: this endpoint answers one client on one
+	 machine, so a timing side channel buys an attacker who can already reach the socket nothing."
+
+	token := aStringOrNil
+]
+
 { #category : 'private' }
 MCPServer >> safeProcess: body [
 	^ [ processor processRawRequest: body ]
@@ -341,4 +377,16 @@ MCPServer >> stopLogging [
 	logger isActive ifFalse: [ ^ self ].
 	logger := MCPNullLogger new.
 	announcer announce: MCPLoggingStopped new
+]
+
+{ #category : 'private' }
+MCPServer >> unauthorizedResponse [
+
+	^ ZnResponse new
+		statusLine: (ZnStatusLine code: 401);
+		headers: (ZnHeaders defaultResponseHeaders
+			at: 'WWW-Authenticate' put: 'Bearer';
+			yourself);
+		entity: (ZnEntity text: 'Unauthorized');
+		yourself
 ]

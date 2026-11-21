@@ -218,6 +218,56 @@ server start.
 
 ---
 
-## Security note
+## Security
 
-`evaluate_pharo` runs arbitrary Pharo code in your image with full privileges. Run only on `localhost` and do not expose port 7777 to external networks.
+`evaluate_pharo` runs arbitrary Pharo code in your image with full privileges, so the socket this
+server listens on is a remote shell in all but name. Three switches harden it. Each one defaults to
+the behaviour earlier versions had, so updating the code breaks no existing deployment.
+
+### Origin validation (always on)
+
+A request whose `Origin` header is present and starts with none of `http://localhost`,
+`http://127.0.0.1` or `http://[::1]` is answered 403, and an accepted request has its own origin
+echoed in `Access-Control-Allow-Origin` rather than the `*` the server used to send. This is what
+stops a web page you happen to visit from driving your image through scripted requests. A request
+carrying no `Origin` header at all is not browser-driven and is served as before: that is how the
+command-line client reaches the image. The allowed prefixes are
+`MCPServer class >> allowedOriginPrefixes`.
+
+### Bind the loopback interface only
+
+The server binds every interface by default, because Claude Code running in a container reaches the
+image through `host.docker.internal`. If every client runs on this machine, bind the loopback
+interface instead:
+
+```smalltalk
+MCPServer default
+	bindLoopbackOnly;
+	start.
+```
+
+### Require a bearer token
+
+No credential is required by default. Set one when the port is reachable by anything you do not
+control:
+
+```smalltalk
+MCPServer default
+	requireToken: 'a-long-random-string';
+	start.
+```
+
+A request with no `Authorization` header, or with a different token, is then answered 401 with
+`WWW-Authenticate: Bearer`. Give the client the same token as a header in `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "pharo": {
+      "type": "http",
+      "url": "http://localhost:7777",
+      "headers": { "Authorization": "Bearer a-long-random-string" }
+    }
+  }
+}
+```

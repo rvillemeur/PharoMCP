@@ -9,13 +9,30 @@ Class {
 }
 
 { #category : 'private' }
-MCPServerTest >> postRequestWithOrigin: anOriginOrNil [
+MCPServerTest >> postRequest [
 
 	| request |
 	request := ZnRequest post: 'http://localhost:17777/'.
 	request entity: (ZnEntity
 		with: '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 		type: ZnMimeType applicationJson).
+	^ request
+]
+
+{ #category : 'private' }
+MCPServerTest >> postRequestWithAuthorization: aStringOrNil [
+
+	| request |
+	request := self postRequest.
+	aStringOrNil ifNotNil: [ :value | request headers at: 'Authorization' put: value ].
+	^ request
+]
+
+{ #category : 'private' }
+MCPServerTest >> postRequestWithOrigin: anOriginOrNil [
+
+	| request |
+	request := self postRequest.
 	anOriginOrNil ifNotNil: [ :origin | request headers at: 'Origin' put: origin ].
 	^ request
 ]
@@ -255,10 +272,46 @@ MCPServerTest >> testSafeProcessValidRequest [
 	self assert: (result includesSubstring: 'tools')
 ]
 
+{ #category : 'tests - token' }
+MCPServerTest >> testServerWithTokenAcceptsMatchingBearer [
+
+	| response |
+	server requireToken: 'a-secret'.
+	response := server handleRequest: (self postRequestWithAuthorization: 'Bearer a-secret').
+	self assert: response statusLine code equals: 200
+]
+
+{ #category : 'tests - token' }
+MCPServerTest >> testServerWithTokenRejectsMissingAuthorization [
+
+	| response |
+	server requireToken: 'a-secret'.
+	response := server handleRequest: (self postRequestWithAuthorization: nil).
+	self assert: response statusLine code equals: 401.
+	self assert: (response headers at: 'WWW-Authenticate') equals: 'Bearer'
+]
+
+{ #category : 'tests - token' }
+MCPServerTest >> testServerWithTokenRejectsWrongToken [
+
+	| response |
+	server requireToken: 'a-secret'.
+	response := server handleRequest: (self postRequestWithAuthorization: 'Bearer another-secret').
+	self assert: response statusLine code equals: 401
+]
+
 { #category : 'tests' }
 MCPServerTest >> testStartAndStop [
 	server start.
 	self assert: server isRunning.
 	server stop.
 	self deny: server isRunning
+]
+
+{ #category : 'tests - token' }
+MCPServerTest >> testTokenlessServerAcceptsRequestWithoutAuthorization [
+
+	| response |
+	response := server handleRequest: (self postRequestWithAuthorization: nil).
+	self assert: response statusLine code equals: 200
 ]
