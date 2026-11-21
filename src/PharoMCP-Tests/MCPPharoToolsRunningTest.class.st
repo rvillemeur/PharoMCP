@@ -1,8 +1,12 @@
+"
+Holds the tools that change or run code to their effect on the image: compiling, renaming, moving, removing, running tests and running the critics.
+"
 Class {
 	#name : 'MCPPharoToolsRunningTest',
 	#superclass : 'TestCase',
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'helpers' }
@@ -374,11 +378,14 @@ MCPPharoToolsRunningTest >> testFormatResultWithSelector [
 	self assert: (r includesSubstring: 'myTest')
 ]
 
-{ #category : 'tests - classComment' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testGetClassCommentNoComment [
-	| r |
-	r := MCPPharoTools getClassComment: 'MCPPharoToolsRunningTest'.
-	self assert: r equals: '(no comment)'
+
+	| className |
+	className := 'MCPCommentlessSubject'.
+	(Object << className asSymbol package: 'PharoMCP-Tests') install.
+	[ self assert: (MCPPharoTools getClassComment: className) equals: '(no comment)' ]
+		ensure: [ (Smalltalk globals at: className asSymbol) removeFromSystem ]
 ]
 
 { #category : 'tests - classComment' }

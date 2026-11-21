@@ -1,8 +1,12 @@
+"
+Holds the log entry subclasses to the request each one is chosen for, and to the request argument each one shows in the window.
+"
 Class {
 	#name : 'MCPLogEntrySubclassTest',
 	#superclass : 'TestCase',
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'helpers' }

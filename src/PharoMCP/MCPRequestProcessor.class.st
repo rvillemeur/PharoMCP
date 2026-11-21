@@ -170,13 +170,18 @@ MCPRequestProcessor >> initialize [
 
 { #category : 'inspector' }
 MCPRequestProcessor >> inspectionProtocol: aBuilder [
+
 	<inspectorPresentationOrder: 2 title: 'Protocol'>
 
+	| supported older unknown |
+	supported := self class supportedProtocolVersions.
+	older := supported last.
+	unknown := 'no-such-revision'.
 	^ (StSimpleInspectorBuilder on: aBuilder)
-		key: 'Supported' value: (', ' join: self class supportedProtocolVersions);
+		key: 'Supported' value: (', ' join: supported);
 		key: 'Latest' value: self class latestProtocolVersion;
-		key: 'Client asks 2025-06-18' value: (self negotiatedProtocolVersionFor: (Dictionary with: 'protocolVersion' -> '2025-06-18'));
-		key: 'Client asks 1999-01-01' value: (self negotiatedProtocolVersionFor: (Dictionary with: 'protocolVersion' -> '1999-01-01'));
+		key: 'Client asks ' , older value: (self negotiatedProtocolVersionFor: (Dictionary with: 'protocolVersion' -> older));
+		key: 'Client asks ' , unknown value: (self negotiatedProtocolVersionFor: (Dictionary with: 'protocolVersion' -> unknown));
 		key: 'Client asks nothing' value: (self negotiatedProtocolVersionFor: Dictionary new);
 		table
 ]

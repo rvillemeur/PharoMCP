@@ -4,8 +4,9 @@ I test MCPLogEntryPresenter: that it fills the four texts of a log entry and cle
 Class {
 	#name : 'MCPLogEntryPresenterTest',
 	#superclass : 'TestCase',
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'private' }

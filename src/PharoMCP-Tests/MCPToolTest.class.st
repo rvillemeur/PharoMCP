@@ -1,8 +1,12 @@
+"
+Holds MCPTool to what it emits to a client and to the required arguments it checks before its handler runs.
+"
 Class {
 	#name : 'MCPToolTest',
 	#superclass : 'TestCase',
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'tests' }

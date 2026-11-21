@@ -1,8 +1,12 @@
+"
+Holds MCPLogger to the entries it builds, the order it keeps them in, and the announcements it raises.
+"
 Class {
 	#name : 'MCPLoggerTest',
 	#superclass : 'TestCase',
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'tests' }

@@ -1,11 +1,15 @@
+"
+Holds the tool factories to their names, their schemas and their annotations.
+"
 Class {
 	#name : 'MCPPharoToolsTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'tool'
 	],
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'running' }
@@ -18,10 +22,10 @@ MCPPharoToolsTest >> setUp [
 MCPPharoToolsTest >> testDestructiveToolsAreAnnotatedDestructive [
 
 	#( 'class_remove' 'package_remove' 'delete_method' 'evaluate_pharo' ) do: [ :each |
-		| tool |
-		tool := self toolNamed: each.
-		self assert: (tool annotations at: 'destructiveHint') description: each , ' should be destructive'.
-		self deny: (tool annotations at: 'readOnlyHint') description: each , ' should not be read only' ]
+		| annotations |
+		annotations := (self toolNamed: each) annotations.
+		self assert: (annotations at: 'destructiveHint') description: each , ' should be destructive'.
+		self deny: (annotations at: 'readOnlyHint') description: each , ' should not be read only' ]
 ]
 
 { #category : 'tests - annotations' }
@@ -39,10 +43,10 @@ MCPPharoToolsTest >> testEveryToolIsAnnotated [
 { #category : 'tests' }
 MCPPharoToolsTest >> testListMethodsOnUnknownClassSaysSo [
 
-	| tool |
-	tool := MCPPharoTools listMethodsTool.
+	| listMethods |
+	listMethods := MCPPharoTools listMethodsTool.
 	self
-		assert: (tool call: (Dictionary new at: 'className' put: 'NoSuchClassHere'; yourself))
+		assert: (listMethods call: (Dictionary new at: 'className' put: 'NoSuchClassHere'; yourself))
 		equals: 'Error: class not found: NoSuchClassHere'
 ]
 
@@ -62,10 +66,10 @@ MCPPharoToolsTest >> testReadOnlyToolsAreAnnotatedReadOnly [
 	#( 'class_definition' 'class_hierarchy' 'list_classes' 'list_methods' 'list_packages'
 		'method_source' 'find_implementors' 'find_senders' 'search_source' 'run_critics' )
 		do: [ :each |
-			| tool |
-			tool := self toolNamed: each.
-			self assert: (tool annotations at: 'readOnlyHint') description: each , ' should be read only'.
-			self deny: (tool annotations at: 'destructiveHint') description: each , ' should not be destructive' ]
+			| annotations |
+			annotations := (self toolNamed: each) annotations.
+			self assert: (annotations at: 'readOnlyHint') description: each , ' should be read only'.
+			self deny: (annotations at: 'destructiveHint') description: each , ' should not be destructive' ]
 ]
 
 { #category : 'tests' }

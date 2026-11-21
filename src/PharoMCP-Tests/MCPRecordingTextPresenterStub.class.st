@@ -8,8 +8,9 @@ Class {
 		'messages',
 		'text'
 	],
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Fixtures',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Fixtures'
 }
 
 { #category : 'recording' }

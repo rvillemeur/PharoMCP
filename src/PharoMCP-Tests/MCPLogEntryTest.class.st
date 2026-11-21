@@ -1,8 +1,12 @@
+"
+Holds MCPLogEntry to what it reads out of a request and a response: the method, the tool name, the arguments and the text of the answer.
+"
 Class {
 	#name : 'MCPLogEntryTest',
 	#superclass : 'TestCase',
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'tests' }

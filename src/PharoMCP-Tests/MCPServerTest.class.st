@@ -1,11 +1,15 @@
+"
+Holds MCPServer to the HTTP rules it keeps: the origin, the credential and the protocol version header gates, the CORS headers, and the response shape for a notification.
+"
 Class {
 	#name : 'MCPServerTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'server'
 	],
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'private' }

@@ -1,8 +1,12 @@
+"
+Holds MCPNullLogger to answering the logger protocol while recording nothing, which is what a server with logging switched off uses.
+"
 Class {
 	#name : 'MCPNullLoggerTest',
 	#superclass : 'TestCase',
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'tests' }

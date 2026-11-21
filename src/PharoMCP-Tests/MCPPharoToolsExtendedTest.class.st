@@ -1,11 +1,15 @@
+"
+Holds each tool to what it answers when called through a processor, the error cases included.
+"
 Class {
 	#name : 'MCPPharoToolsExtendedTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'processor'
 	],
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'helpers' }

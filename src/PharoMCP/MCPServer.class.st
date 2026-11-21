@@ -74,7 +74,16 @@ MCPServer class >> current [
 
 { #category : 'instance creation' }
 MCPServer class >> default [
-	^ self onPort: 7777
+
+	^ self onPort: self defaultPort
+]
+
+{ #category : 'accessing' }
+MCPServer class >> defaultPort [
+
+	"The port the README, the examples and ~/.claude.json all name."
+
+	^ 7777
 ]
 
 { #category : 'accessing' }

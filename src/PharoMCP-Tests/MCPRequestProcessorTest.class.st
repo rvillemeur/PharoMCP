@@ -1,11 +1,15 @@
+"
+Holds MCPRequestProcessor to the JSON-RPC and MCP rules: version negotiation, ping, tool results, tool errors and the protocol errors.
+"
 Class {
 	#name : 'MCPRequestProcessorTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'processor'
 	],
-	#category : 'PharoMCP-Tests',
-	#package : 'PharoMCP-Tests'
+	#category : 'PharoMCP-Tests-Tests',
+	#package : 'PharoMCP-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'helpers' }
