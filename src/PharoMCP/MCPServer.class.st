@@ -32,6 +32,18 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'accessing' }
+MCPServer class >> allowedOriginPrefixes [
+
+	"A browser page can POST to this server from any site, and the server evaluates arbitrary
+	 Pharo code, so a request carrying a foreign Origin is a cross-site attack and is refused.
+	 The MCP specification makes this validation a MUST for a local HTTP server. A request with
+	 no Origin header at all is not browser-driven and is served: that is how the command-line
+	 client reaches the image."
+
+	^ #( 'http://localhost' 'http://127.0.0.1' 'http://[::1]' )
+]
+
 { #category : 'instance creation' }
 MCPServer class >> current [
 	^ Smalltalk at: #PharoMCPServer ifAbsentPut: [ self default ]
@@ -51,8 +63,18 @@ MCPServer class >> onPort: aPort [
 
 { #category : 'private' }
 MCPServer >> addCorsHeadersTo: aResponse [
+
+	^ self addCorsHeadersTo: aResponse origin: nil
+]
+
+{ #category : 'private' }
+MCPServer >> addCorsHeadersTo: aResponse origin: anOriginOrNil [
+
+	"Echo the request's own origin rather than '*' when there is one: a wildcard tells every
+	 browser page that its scripted requests may read this server's answers."
+
 	aResponse headers
-		at: 'Access-Control-Allow-Origin' put: '*';
+		at: 'Access-Control-Allow-Origin' put: (anOriginOrNil ifNil: [ '*' ]);
 		at: 'Access-Control-Allow-Methods' put: 'POST, OPTIONS';
 		at: 'Access-Control-Allow-Headers' put: 'Content-Type, Accept'.
 	^ aResponse
@@ -86,6 +108,15 @@ MCPServer >> extractBodyFrom: request [
 ]
 
 { #category : 'private' }
+MCPServer >> forbiddenResponse [
+
+	^ ZnResponse new
+		statusLine: (ZnStatusLine code: 403);
+		entity: (ZnEntity text: 'Forbidden');
+		yourself
+]
+
+{ #category : 'private' }
 MCPServer >> handleNonPostRequest [
 	^ self addCorsHeadersTo: (ZnResponse new
 		statusLine: ZnStatusLine methodNotAllowed;
@@ -102,28 +133,31 @@ MCPServer >> handleOptionsRequest [
         ^ self addCorsHeadersTo: response
 ]
 
-{ #category : 'private' }
+{ #category : 'handling' }
 MCPServer >> handleRequest: request [
 	"Functional delegate protocol — ZnServer uses the returned ZnResponse"
-	| body result |
-	request method = 'OPTIONS' ifTrue: [ ^ self handleOptionsRequest ].
-	request method ~= 'POST' ifTrue: [ ^ self handleNonPostRequest ].
+
+	| origin body result |
+	origin := self originOf: request.
+	(self isOriginAllowed: origin) ifFalse: [ ^ self forbiddenResponse ].
+	request method = 'OPTIONS' ifTrue: [
+		^ self addCorsHeadersTo: self handleOptionsRequest origin: origin ].
+	request method ~= 'POST' ifTrue: [
+		^ self addCorsHeadersTo: self handleNonPostRequest origin: origin ].
 	body := self extractBodyFrom: request.
 	result := self safeProcess: body.
 	self logRequest: body response: result.
-	^ self buildResponseFor: result
+	^ self addCorsHeadersTo: (self buildResponseFor: result) origin: origin
 ]
 
-{ #category : 'private' }
+{ #category : 'handling' }
 MCPServer >> handleRequest: request into: response [
 	"Service delegate protocol — ZnServer passes response to modify in place"
+
 	| built |
 	built := self handleRequest: request.
 	response statusLine: built statusLine.
-	response headers
-		at: 'Access-Control-Allow-Origin' put: '*';
-		at: 'Access-Control-Allow-Methods' put: 'POST, OPTIONS';
-		at: 'Access-Control-Allow-Headers' put: 'Content-Type, Accept'.
+	built headers keysAndValuesDo: [ :key :value | response headers at: key put: value ].
 	built entity ifNotNil: [ :e | response entity: e ]
 ]
 
@@ -141,11 +175,14 @@ MCPServer >> initialize [
 { #category : 'inspector' }
 MCPServer >> inspectionStatus: aBuilder [
 	<inspectorPresentationOrder: 0 title: 'Status'>
+
 	^ (StSimpleInspectorBuilder on: aBuilder)
 		key: 'Port' value: port printString;
 		key: 'Running' value: self isRunning printString;
 		key: 'Tools' value: (processor ifNil: [ '0' ] ifNotNil: [ :p | p tools size printString ]);
 		key: 'Logger' value: logger class name;
+		key: 'Allowed origins' value: (', ' join: self class allowedOriginPrefixes);
+		key: 'Foreign origin' value: (self isOriginAllowed: 'https://evil.example') printString;
 		table
 ]
 
@@ -160,6 +197,13 @@ MCPServer >> inspectionTools: aBuilder [
 { #category : 'testing' }
 MCPServer >> isLogging [
 	^ logger isActive
+]
+
+{ #category : 'private' }
+MCPServer >> isOriginAllowed: anOriginOrNil [
+
+	anOriginOrNil ifNil: [ ^ true ].
+	^ self class allowedOriginPrefixes anySatisfy: [ :each | anOriginOrNil beginsWith: each ]
 ]
 
 { #category : 'testing' }
@@ -179,6 +223,12 @@ MCPServer >> logRequest: body response: result [
 { #category : 'accessing' }
 MCPServer >> logger [
 	^ logger
+]
+
+{ #category : 'private' }
+MCPServer >> originOf: aRequest [
+
+	^ aRequest headers at: 'Origin' ifAbsent: [ nil ]
 ]
 
 { #category : 'accessing' }

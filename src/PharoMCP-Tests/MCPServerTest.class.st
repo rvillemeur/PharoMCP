@@ -8,6 +8,18 @@ Class {
 	#package : 'PharoMCP-Tests'
 }
 
+{ #category : 'private' }
+MCPServerTest >> postRequestWithOrigin: anOriginOrNil [
+
+	| request |
+	request := ZnRequest post: 'http://localhost:17777/'.
+	request entity: (ZnEntity
+		with: '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+		type: ZnMimeType applicationJson).
+	anOriginOrNil ifNotNil: [ :origin | request headers at: 'Origin' put: origin ].
+	^ request
+]
+
 { #category : 'running' }
 MCPServerTest >> setUp [
 	super setUp.
@@ -161,6 +173,33 @@ MCPServerTest >> testRegisterCustomTool [
 		handler: [ :args | 'custom result' ].
 	server registerTool: customTool.
 	self assert: (server processor tools includesKey: 'custom')
+]
+
+{ #category : 'tests - origin' }
+MCPServerTest >> testRequestWithForeignOriginIsForbidden [
+
+	| response |
+	response := server handleRequest: (self postRequestWithOrigin: 'https://evil.example').
+	self assert: response statusLine code equals: 403
+]
+
+{ #category : 'tests - origin' }
+MCPServerTest >> testRequestWithLocalOriginIsAccepted [
+
+	| origin response |
+	origin := 'http://localhost:17777'.
+	response := server handleRequest: (self postRequestWithOrigin: origin).
+	self assert: response statusLine code equals: 200.
+	self assert: (response headers at: 'Access-Control-Allow-Origin') equals: origin
+]
+
+{ #category : 'tests - origin' }
+MCPServerTest >> testRequestWithoutOriginIsAccepted [
+
+	| response |
+	response := server handleRequest: (self postRequestWithOrigin: nil).
+	self assert: response statusLine code equals: 200.
+	self assert: (response headers at: 'Access-Control-Allow-Origin') equals: '*'
 ]
 
 { #category : 'tests - private' }
