@@ -344,7 +344,8 @@ Each is optional in the specification. Order is by value to a Pharo client.
 
 A GET endpoint with an SSE stream, and with it `logging`, progress notifications and
 `notifications/tools/list_changed`, is the one structural gap. It needs a second delegate
-path and a stream registry, so it gets its own plan rather than a unit here. Returning 405
+path and a stream registry, so it gets its own plan rather than a unit here — it is now
+Phase 9.2, deferred until PharoMCP is used remotely. Returning 405
 on GET is allowed by the specification, so nothing is broken meanwhile.
 
 Tasks (`execution.taskSupport`) stay out: they are experimental in 2025-11-25.
