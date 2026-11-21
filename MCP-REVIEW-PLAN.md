@@ -567,3 +567,90 @@ fixes it. The second clears the magic value the same review found in `listPackag
   `No packages found matching: ...`. `MCPPharoTools` is down to two critiques, both
   pre-existing: the method count of `MCPPharoTools class` and the complexity of
   `searchSource:inMethods:caseSensitive:`.
+
+---
+
+## Phase 9 — what remote development would require, deferred
+
+PharoMCP runs on one machine today: the image, the checkout and the client are all local, and
+the client reaches the image over `host.docker.internal` from its container. Nothing in this
+phase is needed for that arrangement, and none of it should be built until the arrangement
+changes. It is written down because each point is invisible until the server is reachable from
+another machine, and because the deferred GET endpoint of Phase 5 belongs here rather than on
+its own: a stream is what a remote client needs and a local one can live without.
+
+The recovery story that holds today is the reason to keep it that way. After an image crash or
+a restart, stopping and starting the server is enough. That works because the server holds no
+state about a client: `MCPServer` has `httpServer port processor announcer logger
+bindingAddress token` and nothing else, so a client simply sends `initialize` again. Every
+point below adds state, and the first obligation of each is to not break that.
+
+### 9.1 Session identity, and forgetting it at startup
+
+Streamable HTTP ties a stream to `Mcp-Session-Id`. The server has no session concept at all
+today. A session table is a plain object, so an image snapshot preserves it while every socket
+behind it dies, and the server would then accept an id it cannot serve — strictly worse than
+the current behaviour. So the session work and its startup purge are one unit, never two: a
+`ClassSessionHandler` registered with `SessionManager default` terminates the stream
+processes, clears the table and leaves `httpServer` nil. A client whose id is gone gets 404
+and re-initialises, which is what the specification prescribes. The rule that keeps the live
+image an advantage rather than a trap: session state must be reconstructible from a fresh
+`initialize`, and nothing durable may be kept in it.
+
+The POST path stays usable with no session id, which the specification permits. A client that
+never opens a stream then behaves exactly as it does today.
+
+### 9.2 The GET endpoint with an SSE stream
+
+This is the deferred item of Phase 5, moved here. It carries `logging`, progress notifications,
+`notifications/tools/list_changed` and the plumbing a `notifications/cancelled` would need.
+Two measurements taken in the development image set its budget:
+
+- A stream process blocked in `SharedQueue >> next` waits on a `Semaphore` and is in no
+  run-queue, so an idle stream costs no CPU at all.
+- `SharedQueue >> nextPut:` costs 0.85 microseconds and `STONJSON toString:` of a
+  `notifications/message` body costs 16 microseconds. So the request process enqueues the log
+  entry object and the stream process encodes it. Encoding on the caller instead pays the 16
+  microseconds once per open stream per notification, for nothing.
+
+Two limits are design decisions, not later optimisations. `ZnCurrentOptions at:
+#maximumNumberOfConcurrentConnections` is 32, and `ZnManagingMultiThreadedServer >>
+socketStreamOn:` answers 503 `Too many concurrent connections` once `connections size` reaches
+it. An SSE stream holds a connection for its whole life, so open streams eat that budget and
+the failure shows up as tool calls failing while the image is idle: cap the open streams in
+`MCPServer` well below 32 and refuse the next GET with an MCP error of our own. Second, each
+queue needs a bound and must drop its oldest entry when full, or a vanished client retains
+every log entry until the image dies. `logging` is advisory, so dropping is correct.
+
+Progress notifications need one more thing: a throttle. One message per test would mean 341
+encodes and 341 socket writes inside a 12 second `run_tests` run, serialised on the same core
+as the tests. At most one progress message every 250 milliseconds, carrying the current count.
+Without the throttle this is the only feature here that can make the image feel slower.
+
+### 9.3 The security switches, turned on rather than written
+
+Phase 1 built these for exactly this moment, and a remote deployment is where they stop being
+optional:
+
+- `MCPServer >> isAuthorized:` answers true when `token` is nil. A server on a network
+  interface must be started with `requireToken:`, and the token must not travel in a shell
+  history or a checked-in file.
+- `bindLoopbackOnly` is not the default, because the local client arrives over
+  `host.docker.internal`. A remote server binds a named interface deliberately, not
+  `0.0.0.0` by omission.
+- `isOriginAllowed:` serves a request with no `Origin` header, which is how the command-line
+  client reaches the image, and otherwise accepts only the three loopback prefixes in
+  `allowedOriginPrefixes`. A remote client sending an `Origin` would be refused today, so the
+  prefix list becomes configuration rather than a constant.
+- There is no transport security. The server evaluates arbitrary Pharo code, so remote use
+  means a TLS terminator or an SSH tunnel in front of it, and the decision has to be written
+  down rather than assumed.
+
+### 9.4 What remote use would break that local use never shows
+
+- Every tool answers paths that exist on the image host. `method_source` is fine; anything a
+  client resolves against its own filesystem is not. Worth an audit before the first remote
+  session rather than after a confusing failure.
+- `evaluate_pharo` has no time limit. A runaway expression blocks a local developer who can
+  see the image and press the interrupt key; it blocks a remote one with no way in.
+- A dropped connection is only detected on write. Local clients never exercise it.
