@@ -8,6 +8,16 @@ Class {
 	#package : 'PharoMCP-Tests'
 }
 
+{ #category : 'private' }
+MCPRequestProcessorTest >> initializeWithVersion: aStringOrNil [
+
+	| params response |
+	params := Dictionary new.
+	aStringOrNil ifNotNil: [ :version | params at: 'protocolVersion' put: version ].
+	response := processor processRawRequest: (self request: 'initialize' id: 1 params: params).
+	^ ((self parse: response) at: 'result') at: 'protocolVersion'
+]
+
 { #category : 'helpers' }
 MCPRequestProcessorTest >> parse: jsonString [
 	^ NeoJSONReader fromString: jsonString
@@ -39,6 +49,22 @@ MCPRequestProcessorTest >> setUp [
 		handler: [ :args | ((args at: 'a') + (args at: 'b')) printString ])
 ]
 
+{ #category : 'tests - initialize' }
+MCPRequestProcessorTest >> testInitializeAnswersLatestForUnknownVersion [
+
+	self
+		assert: (self initializeWithVersion: '1999-01-01')
+		equals: MCPRequestProcessor latestProtocolVersion
+]
+
+{ #category : 'tests - initialize' }
+MCPRequestProcessorTest >> testInitializeAnswersLatestWhenClientSendsNoVersion [
+
+	self
+		assert: (self initializeWithVersion: nil)
+		equals: MCPRequestProcessor latestProtocolVersion
+]
+
 { #category : 'tests' }
 MCPRequestProcessorTest >> testInitializeCapabilitiesIncludeTools [
 	| response result |
@@ -46,6 +72,12 @@ MCPRequestProcessorTest >> testInitializeCapabilitiesIncludeTools [
 		(self request: 'initialize' id: 1 params: Dictionary new).
 	result := (self parse: response) at: 'result'.
 	self assert: ((result at: 'capabilities') includesKey: 'tools')
+]
+
+{ #category : 'tests - initialize' }
+MCPRequestProcessorTest >> testInitializeEchoesSupportedVersionRequestedByClient [
+
+	self assert: (self initializeWithVersion: '2025-06-18') equals: '2025-06-18'
 ]
 
 { #category : 'tests' }

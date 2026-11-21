@@ -21,6 +21,22 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'protocol versions' }
+MCPRequestProcessor class >> latestProtocolVersion [
+
+	^ self supportedProtocolVersions first
+]
+
+{ #category : 'protocol versions' }
+MCPRequestProcessor class >> supportedProtocolVersions [
+
+	"Newest first: the first entry is what a client that asks for nothing, or for a revision this
+	 server does not know, is answered. 2024-11-05 stays in the list because clients still ask
+	 for it and the specification requires the server to echo a revision it supports."
+
+	^ #( '2025-11-25' '2025-06-18' '2025-03-26' '2024-11-05' )
+]
+
 { #category : 'processing' }
 MCPRequestProcessor >> dispatchRequest: request [
 	| method id params |
@@ -51,11 +67,12 @@ MCPRequestProcessor >> errorResponseWithId: id code: code message: msg [
 		yourself)
 ]
 
-{ #category : 'handlers' }
+{ #category : 'handling' }
 MCPRequestProcessor >> handleInitialize: params id: id [
+
 	^ self
 		successResponseWithResult: (Dictionary new
-			at: 'protocolVersion' put: '2024-11-05';
+			at: 'protocolVersion' put: (self negotiatedProtocolVersionFor: params);
 			at: 'capabilities' put: (Dictionary new
 				at: 'tools' put: Dictionary new;
 				yourself);
@@ -117,6 +134,19 @@ MCPRequestProcessor >> initialize [
 ]
 
 { #category : 'inspector' }
+MCPRequestProcessor >> inspectionProtocol: aBuilder [
+	<inspectorPresentationOrder: 2 title: 'Protocol'>
+
+	^ (StSimpleInspectorBuilder on: aBuilder)
+		key: 'Supported' value: (', ' join: self class supportedProtocolVersions);
+		key: 'Latest' value: self class latestProtocolVersion;
+		key: 'Client asks 2025-06-18' value: (self negotiatedProtocolVersionFor: (Dictionary with: 'protocolVersion' -> '2025-06-18'));
+		key: 'Client asks 1999-01-01' value: (self negotiatedProtocolVersionFor: (Dictionary with: 'protocolVersion' -> '1999-01-01'));
+		key: 'Client asks nothing' value: (self negotiatedProtocolVersionFor: Dictionary new);
+		table
+]
+
+{ #category : 'inspector' }
 MCPRequestProcessor >> inspectionTools: aBuilder [
 	<inspectorPresentationOrder: 0 title: 'Tools'>
 	| sorted |
@@ -126,6 +156,16 @@ MCPRequestProcessor >> inspectionTools: aBuilder [
 		addColumn: (SpStringTableColumn title: 'Description' evaluated: [ :t | t description truncateWithElipsisTo: 80 ]);
 		items: sorted;
 		yourself
+]
+
+{ #category : 'private' }
+MCPRequestProcessor >> negotiatedProtocolVersionFor: params [
+
+	| requested |
+	requested := params at: 'protocolVersion' ifAbsent: [ ^ self class latestProtocolVersion ].
+	^ (self class supportedProtocolVersions includes: requested)
+		ifTrue: [ requested ]
+		ifFalse: [ self class latestProtocolVersion ]
 ]
 
 { #category : 'processing' }
