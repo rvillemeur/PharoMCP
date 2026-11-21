@@ -437,11 +437,12 @@ MCPPharoToolsRunningTest >> testGetClassCommentUnknownClass [
 			self assert: (e messageText includesSubstring: 'NoSuchClassXYZ') ]
 ]
 
-{ #category : 'tests - listMethods' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testListMethodsClassSideIncludesProtocol [
+
 	| tool result |
 	tool := MCPPharoTools listMethodsTool.
-	result := tool handler value: (Dictionary new
+	result := tool call: (Dictionary new
 		at: 'className' put: 'MCPPharoTools';
 		at: 'side' put: 'class';
 		yourself).
@@ -449,20 +450,22 @@ MCPPharoToolsRunningTest >> testListMethodsClassSideIncludesProtocol [
 	self deny: (result beginsWith: 'Error')
 ]
 
-{ #category : 'tests - listMethods' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testListMethodsIncludesProtocol [
+
 	| tool result |
 	tool := MCPPharoTools listMethodsTool.
-	result := tool handler value: (Dictionary new at: 'className' put: 'MCPTool'; yourself).
+	result := tool call: (Dictionary new at: 'className' put: 'MCPTool'; yourself).
 	self assert: (result includesSubstring: ' | ').
 	self assert: (result includesSubstring: 'accessing')
 ]
 
-{ #category : 'tests - listMethods' }
+{ #category : 'tests' }
 MCPPharoToolsRunningTest >> testListMethodsSortedByProtocolThenSelector [
+
 	| tool result lines descIdx nameIdx |
 	tool := MCPPharoTools listMethodsTool.
-	result := tool handler value: (Dictionary new at: 'className' put: 'MCPTool'; yourself).
+	result := tool call: (Dictionary new at: 'className' put: 'MCPTool'; yourself).
 	lines := result lines reject: [ :l | l isEmpty ].
 	self assert: lines size > 1.
 	descIdx := lines indexOf: 'accessing | description'.

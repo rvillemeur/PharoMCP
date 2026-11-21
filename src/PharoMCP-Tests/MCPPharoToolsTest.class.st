@@ -41,6 +41,21 @@ MCPPharoToolsTest >> testEveryToolIsAnnotated [
 ]
 
 { #category : 'tests' }
+MCPPharoToolsTest >> testEveryToolIsItsOwnClass [
+
+	"One class per tool: its name, description, schema and body are methods of a class, not
+	 literals inside a factory. A tool left as an MCPTool built from a block still carries the
+	 block in its handler."
+	MCPPharoTools allTools do: [ :tool |
+		self
+			deny: tool class = MCPTool
+			description: tool name , ' is still built from a block'.
+		self
+			assert: tool handler isNil
+			description: tool name , ' still carries a handler block' ]
+]
+
+{ #category : 'tests' }
 MCPPharoToolsTest >> testListMethodsOnUnknownClassSaysSo [
 
 	| listMethods |

@@ -69,13 +69,12 @@ MCPTool >> annotations: aDictionary [
 	annotations := aDictionary
 ]
 
-{ #category : 'testing' }
+{ #category : 'calling' }
 MCPTool >> answersStructuredContent: aResult [
 
 	"A tool that declares an outputSchema answers a dictionary when it succeeded, and a plain
 	 string when it has an error to report, which belongs in the text block alone."
-
-	^ outputSchema notNil and: [ aResult isDictionary ]
+	^ self outputSchema notNil and: [ aResult isDictionary ]
 ]
 
 { #category : 'converting' }
@@ -83,13 +82,13 @@ MCPTool >> asDictionary [
 
 	| dictionary |
 	dictionary := Dictionary new
-		at: 'name' put: name;
-		at: 'description' put: description;
-		at: 'inputSchema' put: inputSchema;
+		at: 'name' put: self name;
+		at: 'description' put: self description;
+		at: 'inputSchema' put: self inputSchema;
 		yourself.
-	title ifNotNil: [ dictionary at: 'title' put: title ].
-	annotations ifNotNil: [ dictionary at: 'annotations' put: annotations ].
-	outputSchema ifNotNil: [ dictionary at: 'outputSchema' put: outputSchema ].
+	self title ifNotNil: [ :each | dictionary at: 'title' put: each ].
+	self annotations ifNotNil: [ :each | dictionary at: 'annotations' put: each ].
+	self outputSchema ifNotNil: [ :each | dictionary at: 'outputSchema' put: each ].
 	^ dictionary
 ]
 
@@ -175,24 +174,24 @@ MCPTool >> inspectionAsSentToClient: aBuilder [
 		yourself
 ]
 
-{ #category : 'inspector' }
+{ #category : 'inspecting' }
 MCPTool >> inspectionSchema: aBuilder [
+
 	<inspectorPresentationOrder: 0 title: 'Schema'>
 	^ aBuilder newCode
 		syntaxHighlight: false;
-		text: (NeoJSONWriter toStringPretty: inputSchema);
+		text: (NeoJSONWriter toStringPretty: self inputSchema);
 		yourself
 ]
 
-{ #category : 'validating' }
+{ #category : 'calling' }
 MCPTool >> missingRequiredArgumentsIn: arguments [
 
 	"The names the tool's own schema requires and the call did not carry. The specification asks
 	 for these to come back as a tool error rather than a protocol error, so the model reading
 	 the answer can correct its own call."
-
 	| required |
-	required := inputSchema at: 'required' ifAbsent: [ ^ OrderedCollection new ].
+	required := self inputSchema at: 'required' ifAbsent: [ ^ OrderedCollection new ].
 	^ (required reject: [ :each | arguments includesKey: each ]) asOrderedCollection
 ]
 
