@@ -40,6 +40,15 @@ MCPRequestProcessorExamples class >> processor [
 ]
 
 { #category : 'examples' }
+MCPRequestProcessorExamples class >> promptGetResponse [
+
+	<sampleInstance>
+	| request |
+	request := '{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"red_green_refactor","arguments":{"subject":"MCPLogger"}}}'.
+	^ MCPRequestProcessor new processRawRequest: request
+]
+
+{ #category : 'examples' }
 MCPRequestProcessorExamples class >> resourceReadResponse [
 
 	<sampleInstance>

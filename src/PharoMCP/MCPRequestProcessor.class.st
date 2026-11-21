@@ -21,16 +21,27 @@ Class {
 	#tag : 'Core'
 }
 
+{ #category : 'prompts' }
+MCPRequestProcessor class >> bugWorkflowTemplate [
+
+	^ (String cr , String cr) join: #(
+		'A bug is reported in this Pharo image: {symptom}.'
+		'Reproduce it first. Write the test that fails because of the bug, compile it with compile_method and see it fail with run_tests. Never write the fix first: a fix with no failing test behind it cannot be shown to fix anything.'
+		'Find the cause before changing a method. Read the code with method_source, and check who depends on it with find_senders and find_implementors; a method with senders you have not read is a method you cannot safely change.'
+		'Then write the smallest change that turns the test green, re-run the whole suite, and run run_critics on the class you changed. An empty on:do: handler is always a bug, never an acceptable fix.' )
+]
+
 { #category : 'constants' }
 MCPRequestProcessor class >> capabilities [
 
-	"What the initialize result declares. Resources carry no subscription and no change
-	 notification, because the server has no stream to send one on."
+	"What the initialize result declares. Resources and prompts carry no subscription and
+	 no change notification, because the server has no stream to send one on."
 
 	^ Dictionary new
 		at: 'tools' put: Dictionary new;
 		at: 'completions' put: Dictionary new;
 		at: 'resources' put: Dictionary new;
+		at: 'prompts' put: Dictionary new;
 		yourself
 ]
 
@@ -56,6 +67,17 @@ MCPRequestProcessor class >> completionSources [
 		yourself
 ]
 
+{ #category : 'prompts' }
+MCPRequestProcessor class >> designReviewTemplate [
+
+	^ (String cr , String cr) join: #(
+		'Review the design of {subject} in this Pharo image. Change nothing until the plan is agreed.'
+		'Diagnose, naming the class or method for every point: methods too long or mixing levels of abstraction; duplication within a class or between sibling classes, which is a candidate to pull up; type tests that polymorphism would replace; feature envy, a method working mostly on another object''s data; primitive obsession, a domain concept carried as a string, a number or a dictionary; chains of message sends; and names that describe the implementation rather than the intention. Run run_critics on the same classes and fold in what is relevant.'
+		'Prioritise by gain against risk, and name the refactoring for each point: Extract Method, Move Method, Replace Conditional with Polymorphism, Pull Up Method.'
+		'Introduce no abstraction, no layer of indirection and no design pattern for a hypothetical need. A proposal that adds classes or methods must say what it simplifies today.'
+		'Present the plan and wait for validation. Then execute one refactoring at a time, re-running the suite after each, and change no test during this phase. If a refactoring forces a test to change, stop and report it.' )
+]
+
 { #category : 'constants' }
 MCPRequestProcessor class >> handlerSelectors [
 
@@ -71,6 +93,8 @@ MCPRequestProcessor class >> handlerSelectors [
 		at: 'resources/list' put: #handleResourcesList:id:;
 		at: 'resources/templates/list' put: #handleResourcesTemplatesList:id:;
 		at: 'resources/read' put: #handleResourcesRead:id:;
+		at: 'prompts/list' put: #handlePromptsList:id:;
+		at: 'prompts/get' put: #handlePromptsGet:id:;
 		yourself
 ]
 
@@ -122,6 +146,60 @@ MCPRequestProcessor class >> methodSourcesOf: aBehavior [
 MCPRequestProcessor class >> packageUriPrefix [
 
 	^ 'pharo://package/'
+]
+
+{ #category : 'prompts' }
+MCPRequestProcessor class >> promptTemplates [
+
+	"The workflows this image is developed by. Each argument''s placeholder is what the
+	 template reads when a client leaves the argument out, so a prompt is readable even
+	 when it is asked for with no arguments at all."
+
+	^ Dictionary new
+		at: 'red_green_refactor' put: (Dictionary new
+			at: 'title' put: 'Red, green, refactor, example, view';
+			at: 'description' put: 'The five steps every unit of work in this image goes through.';
+			at: 'template' put: self redGreenRefactorTemplate;
+			at: 'arguments' put: { Dictionary new
+				at: 'name' put: 'subject';
+				at: 'description' put: 'Class, method or feature the unit of work is about.';
+				at: 'placeholder' put: 'the class you are asked to change';
+				yourself };
+			yourself);
+		at: 'bug_workflow' put: (Dictionary new
+			at: 'title' put: 'Reproduce before you fix';
+			at: 'description' put: 'How a defect is handled here: the failing test comes first.';
+			at: 'template' put: self bugWorkflowTemplate;
+			at: 'arguments' put: { Dictionary new
+				at: 'name' put: 'symptom';
+				at: 'description' put: 'What goes wrong, as a reader of the report would say it.';
+				at: 'placeholder' put: 'the symptom you were given';
+				yourself };
+			yourself);
+		at: 'design_review' put: (Dictionary new
+			at: 'title' put: 'Design review of finished work';
+			at: 'description' put: 'The review a feature gets once its tests are green.';
+			at: 'template' put: self designReviewTemplate;
+			at: 'arguments' put: { Dictionary new
+				at: 'name' put: 'subject';
+				at: 'description' put: 'Class or package whose design is under review.';
+				at: 'placeholder' put: 'the code the finished feature touched';
+				yourself };
+			yourself);
+		yourself
+]
+
+{ #category : 'prompts' }
+MCPRequestProcessor class >> redGreenRefactorTemplate [
+
+	^ (String cr , String cr) join: #(
+		'Work on {subject} in this Pharo image through the MCP tools, one unit at a time, in five steps.'
+		'1. Red. Write the failing test first with compile_method on the test class, then run it with run_tests and read the failure. A test states a fact, fails when that fact stops holding, and covers the degenerate cases too.'
+		'2. Green. Write the smallest code that passes. Nothing more.'
+		'3. Refactor. With the suite green, remove the duplication the green step introduced and check the names say what the code means. No new abstraction until the same duplication has appeared three times.'
+		'4. Example. Add or extend a class-side unary method tagged <sampleInstance> on the matching <Subject>Examples class. It rebuilds the object on every call and asserts nothing, so a reader runs it with one click. An example that opens a window is named open...'
+		'5. View. Add a custom inspector view: a keyword method taking the presenter builder as its only argument, tagged <inspectorPresentationOrder:title:>, building through the builder. It never mutates the inspected object, and it asks the real rule rather than restating it.'
+		'Then run run_critics on every class you changed. The unit is not done until all five artefacts exist and critics are clean on what changed.' )
 ]
 
 { #category : 'constants' }
@@ -350,6 +428,54 @@ MCPRequestProcessor >> handlePing: params id: id [
 ]
 
 { #category : 'handlers' }
+MCPRequestProcessor >> handlePromptsGet: params id: id [
+
+	| name template arguments |
+	name := params at: 'name' ifAbsent: [
+		^ self errorResponseWithId: id code: -32602 message: 'Missing parameter: name' ].
+	template := self class promptTemplates at: name ifAbsent: [
+		^ self errorResponseWithId: id code: -32602 message: 'Unknown prompt: ' , name ].
+	arguments := params at: 'arguments' ifAbsent: [ Dictionary new ].
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'description' put: (template at: 'description');
+			at: 'messages' put: { Dictionary new
+				at: 'role' put: 'user';
+				at: 'content' put: (Dictionary new
+					at: 'type' put: 'text';
+					at: 'text' put: (self promptTextOf: template with: arguments);
+					yourself);
+				yourself };
+			yourself)
+		id: id
+]
+
+{ #category : 'handlers' }
+MCPRequestProcessor >> handlePromptsList: params id: id [
+
+	| names |
+	names := self class promptTemplates keys asSortedCollection asArray.
+	^ self
+		successResponseWithResult: (Dictionary new
+			at: 'prompts' put: (names collect: [ :each |
+				| template |
+				template := self class promptTemplates at: each.
+				Dictionary new
+					at: 'name' put: each;
+					at: 'title' put: (template at: 'title');
+					at: 'description' put: (template at: 'description');
+					at: 'arguments' put: ((template at: 'arguments') collect: [ :argument |
+						Dictionary new
+							at: 'name' put: (argument at: 'name');
+							at: 'description' put: (argument at: 'description');
+							at: 'required' put: false;
+							yourself ]);
+					yourself ]);
+			yourself)
+		id: id
+]
+
+{ #category : 'handlers' }
 MCPRequestProcessor >> handleResourcesList: params id: id [
 
 	"Packages are the listed resources; the image holds some fifteen thousand classes, so a
@@ -467,6 +593,27 @@ MCPRequestProcessor >> inspectionCompletion: aBuilder [
 ]
 
 { #category : 'inspector' }
+MCPRequestProcessor >> inspectionPrompts: aBuilder [
+
+	<inspectorPresentationOrder: 5 title: 'Prompts'>
+
+	"Each row renders the prompt with no arguments at all, which is the case a brace would
+	 survive, and reports whether one did."
+
+	^ aBuilder newTable
+		items: (self class promptTemplates keys asSortedCollection asArray collect: [ :name |
+			self promptReportFor: name ]);
+		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :each | each at: 'name' ]);
+		addColumn: (SpStringTableColumn title: 'Title' evaluated: [ :each | each at: 'title' ]);
+		addColumn: (SpStringTableColumn title: 'Arguments' evaluated: [ :each | each at: 'arguments' ]);
+		addColumn: (SpStringTableColumn title: 'Characters' evaluated: [ :each |
+			(each at: 'size') printString ]);
+		addColumn: (SpStringTableColumn title: 'Unfilled brace' evaluated: [ :each |
+			(each at: 'unfilled') printString ]);
+		yourself
+]
+
+{ #category : 'inspector' }
 MCPRequestProcessor >> inspectionProtocol: aBuilder [
 
 	<inspectorPresentationOrder: 2 title: 'Protocol'>
@@ -545,6 +692,42 @@ MCPRequestProcessor >> processRawRequest: jsonString [
 	(request isDictionary) ifFalse: [
 		^ self errorResponseWithId: nil code: -32600 message: 'Invalid Request' ].
 	^ self dispatchRequest: request
+]
+
+{ #category : 'prompts' }
+MCPRequestProcessor >> promptReportFor: aName [
+
+	"What one prompt answers when it is asked for with no arguments, read through the real
+	 substitution method."
+
+	| template text |
+	template := self class promptTemplates at: aName.
+	text := self promptTextOf: template with: Dictionary new.
+	^ Dictionary new
+		at: 'name' put: aName;
+		at: 'title' put: (template at: 'title');
+		at: 'arguments' put: (', ' join: ((template at: 'arguments') collect: [ :each |
+			each at: 'name' ]));
+		at: 'size' put: text size;
+		at: 'unfilled' put: (text includesSubstring: '{');
+		yourself
+]
+
+{ #category : 'prompts' }
+MCPRequestProcessor >> promptTextOf: aTemplate with: anArgumentDictionary [
+
+	"An argument the client leaves out reads as its placeholder, so the text never shows a
+	 brace to the model that is asked to follow it."
+
+	| text |
+	text := aTemplate at: 'template'.
+	(aTemplate at: 'arguments') do: [ :argument |
+		| value |
+		value := anArgumentDictionary
+			at: (argument at: 'name')
+			ifAbsent: [ argument at: 'placeholder' ].
+		text := text copyReplaceAll: '{' , (argument at: 'name') , '}' with: value ].
+	^ text
 ]
 
 { #category : 'tool management' }

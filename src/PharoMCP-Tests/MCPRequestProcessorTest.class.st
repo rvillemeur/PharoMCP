@@ -202,6 +202,14 @@ MCPRequestProcessorTest >> testInitializeDeclaresCompletionsCapability [
 	self assert: (capabilities includesKey: 'completions')
 ]
 
+{ #category : 'tests - prompts' }
+MCPRequestProcessorTest >> testInitializeDeclaresPromptsCapability [
+
+	| capabilities |
+	capabilities := (self initializeResultWithVersion: nil) at: 'capabilities'.
+	self assert: (capabilities includesKey: 'prompts')
+]
+
 { #category : 'tests - resources' }
 MCPRequestProcessorTest >> testInitializeDeclaresResourcesCapability [
 
@@ -326,6 +334,68 @@ MCPRequestProcessorTest >> testPingAnswersEmptyResult [
 	self assert: (result at: 'id') equals: 7.
 	self deny: (result includesKey: 'error').
 	self assert: (result at: 'result') isEmpty
+]
+
+{ #category : 'tests - prompts' }
+MCPRequestProcessorTest >> testPromptArgumentsAreDeclaredAndSubstituted [
+
+	"Every argument a prompt declares must appear in its template, and an argument left out
+	 must leave a readable text rather than a hole."
+
+	| prompts |
+	prompts := (self resultOf: 'prompts/list' params: Dictionary new) at: 'prompts'.
+	prompts do: [ :each |
+		| content template |
+		content := ((self resultOf: 'prompts/get' params: (Dictionary new
+			at: 'name' put: (each at: 'name');
+			yourself)) at: 'messages') first at: 'content'.
+		self deny: ((content at: 'text') includesSubstring: '{').
+		template := (MCPRequestProcessor promptTemplates at: (each at: 'name')) at: 'template'.
+		(each at: 'arguments') do: [ :argument |
+			self assert: (template includesSubstring: '{' , (argument at: 'name') , '}') ] ]
+]
+
+{ #category : 'tests - prompts' }
+MCPRequestProcessorTest >> testPromptsGetAnswersUserMessage [
+
+	| result message |
+	result := self resultOf: 'prompts/get' params: (Dictionary new
+		at: 'name' put: 'red_green_refactor';
+		at: 'arguments' put: (Dictionary new
+			at: 'subject' put: 'MCPLogEntry';
+			yourself);
+		yourself).
+	self assert: (result includesKey: 'description').
+	message := (result at: 'messages') first.
+	self assert: (message at: 'role') equals: 'user'.
+	self assert: ((message at: 'content') at: 'type') equals: 'text'.
+	self assert: (((message at: 'content') at: 'text') includesSubstring: 'MCPLogEntry').
+	self assert: (((message at: 'content') at: 'text') includesSubstring: 'sampleInstance')
+]
+
+{ #category : 'tests - prompts' }
+MCPRequestProcessorTest >> testPromptsGetOfUnknownNameIsError [
+
+	| response error |
+	response := processor processRawRequest: (self request: 'prompts/get' id: 9 params: (Dictionary new
+		at: 'name' put: 'no_such_prompt';
+		yourself)).
+	error := (self parse: response) at: 'error'.
+	self assert: (error at: 'code') equals: -32602.
+	self assert: ((error at: 'message') includesSubstring: 'no_such_prompt')
+]
+
+{ #category : 'tests - prompts' }
+MCPRequestProcessorTest >> testPromptsListCarriesTheCycle [
+
+	| prompts names |
+	prompts := (self resultOf: 'prompts/list' params: Dictionary new) at: 'prompts'.
+	names := prompts collect: [ :each | each at: 'name' ].
+	self assert: (names includes: 'red_green_refactor').
+	self assert: (names includes: 'bug_workflow').
+	self assert: (names includes: 'design_review').
+	self assert: (prompts allSatisfy: [ :each |
+		(each includesKey: 'title') and: [ each includesKey: 'description' ] ])
 ]
 
 { #category : 'tests - resources' }
