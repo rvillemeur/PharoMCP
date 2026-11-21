@@ -27,6 +27,16 @@ MCPRequestProcessor class >> latestProtocolVersion [
 	^ self supportedProtocolVersions first
 ]
 
+{ #category : 'accessing' }
+MCPRequestProcessor class >> maximumResultSize [
+
+	"Characters of a tool result the server sends before cutting it. A client pays for every
+	 one of them in its context window, and a tool asked for too much is better corrected than
+	 answered in full."
+
+	^ 10000
+]
+
 { #category : 'protocol versions' }
 MCPRequestProcessor class >> supportedProtocolVersions [
 
@@ -111,9 +121,7 @@ MCPRequestProcessor >> handleToolsCall: params id: id [
 			isError := true.
 			'Error: ' , e messageText ].
 	resultText isString ifFalse: [ resultText := resultText printString ].
-	resultText size > 10000 ifTrue: [
-		resultText := (resultText copyFrom: 1 to: 10000) , '...(truncated)' ].
-	^ self toolResult: resultText isError: isError id: id
+	^ self toolResult: (self truncated: resultText) isError: isError id: id
 ]
 
 { #category : 'handlers' }
@@ -229,4 +237,13 @@ MCPRequestProcessor >> toolResult: aString isError: aBoolean id: id [
 { #category : 'accessing' }
 MCPRequestProcessor >> tools [
 	^ tools
+]
+
+{ #category : 'private' }
+MCPRequestProcessor >> truncated: aString [
+
+	| limit |
+	limit := self class maximumResultSize.
+	aString size <= limit ifTrue: [ ^ aString ].
+	^ (aString first: limit) , '...(truncated, ' , aString size printString , ' characters)'
 ]

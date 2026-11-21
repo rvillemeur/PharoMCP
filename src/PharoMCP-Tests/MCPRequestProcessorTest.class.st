@@ -115,6 +115,25 @@ MCPRequestProcessorTest >> testInitializeReturnsServerInfo [
 ]
 
 { #category : 'tests - tools/call' }
+MCPRequestProcessorTest >> testLongResultIsTruncatedWithItsSizeStated [
+
+	| size response text |
+	size := MCPRequestProcessor maximumResultSize + 500.
+	processor registerTool: (MCPTool
+		name: 'long'
+		description: 'Answers a long string'
+		schema: Dictionary new
+		handler: [ :args | String new: size withAll: $x ]).
+	response := processor processRawRequest: (self request: 'tools/call' id: 1 params: (Dictionary new
+		at: 'name' put: 'long';
+		at: 'arguments' put: Dictionary new;
+		yourself)).
+	text := (((self parse: response) at: 'result') at: 'content') first at: 'text'.
+	self assert: (text beginsWith: (String new: MCPRequestProcessor maximumResultSize withAll: $x)).
+	self assert: (text endsWith: '(truncated, ' , size printString , ' characters)')
+]
+
+{ #category : 'tests - tools/call' }
 MCPRequestProcessorTest >> testMissingRequiredArgumentIsToolError [
 
 	| response result called |
@@ -181,6 +200,23 @@ MCPRequestProcessorTest >> testResponseIsValidJson [
 		            (self request: 'tools/list' id: 1 params: Dictionary new).
 	self assert: response isString.
 	NeoJSONReader fromString: response
+]
+
+{ #category : 'tests - tools/call' }
+MCPRequestProcessorTest >> testShortResultIsNotTruncated [
+
+	| response text |
+	processor registerTool: (MCPTool
+		name: 'short'
+		description: 'Answers a short string'
+		schema: Dictionary new
+		handler: [ :args | 'brief' ]).
+	response := processor processRawRequest: (self request: 'tools/call' id: 1 params: (Dictionary new
+		at: 'name' put: 'short';
+		at: 'arguments' put: Dictionary new;
+		yourself)).
+	text := (((self parse: response) at: 'result') at: 'content') first at: 'text'.
+	self assert: text equals: 'brief'
 ]
 
 { #category : 'tests' }
