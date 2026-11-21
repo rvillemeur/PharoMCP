@@ -363,3 +363,95 @@ That is a refactor of the whole package, so it follows the project's rule: diagn
 the refactoring for each point, prioritise by gain against risk, present the plan and wait
 for validation before any edit. Nothing in this phase is started before phases 1 to 4 are
 green and committed.
+
+### The units, as approved
+
+The diagnosis listed six points. Points 1, 2, 3, 4 and 6 were approved and are recorded here.
+Point 5 was declined and is recorded as not done, so a later reader does not take it for
+an oversight.
+
+### 6.1 A tool that fails reports success
+
+- Test: `MCPRequestProcessorTest >> testEveryToolSaysSoWhenItFails`, written first and seen
+  to fail — a handler that returned a text starting with `Error` answered `isError: false`.
+- Change: signal an error instead of returning its text.
+- Done when: a failing call over `tools/call` answers `isError: true` and the text a client
+  reads is unchanged.
+- **Done**, commit `1548ddc`. The helpers and the handler blocks signal `MCPToolError`, a new
+  `Error` subclass in the `Core` tag, with the bare reason; the processor already caught
+  `Error` and wrote the `Error: ` prefix, so only the flag changed. `evaluate_pharo` lost its
+  own handler for the same reason. The 42 tests that asserted the literal prefix on a helper
+  return now use `should:raise:withExceptionDo:` and check the reason. `MCPToolError` carries
+  its example and an inspector view built through the processor, so the view cannot drift from
+  what a client sees. 308 tests pass.
+
+### 6.2 The dead required-argument guards
+
+- Test: `MCPRequestProcessorTest >> testEveryRequiredArgumentIsRejectedBeforeTheHandlerRuns`,
+  which pins the processor guard for every registered tool before anything is removed.
+- Change: remove the guard repeated inside fourteen handler blocks.
+- Done when: the suite is green with the guards gone.
+- **Done**, commit `e983857`. `handleToolsCall:id:` asks the tool which required arguments the
+  call did not carry and answers a tool error before the handler runs, so the repeated check
+  was unreachable. Five tests in `MCPPharoToolsExtendedTest` called a handler block with an
+  empty dictionary and only the dead guard made them pass; they now go through `tools/call` by
+  `missingArgumentTextOf:args:`. 309 tests pass. Critics on `MCPPharoTools` fall from 36 to 17.
+
+### 6.3 One class lookup, one package lookup
+
+- Change: extract the duplicated `Smalltalk globals at: ... ifAbsent:` lookup, its not-found
+  text and the metaclass switch on the side argument.
+- Done when: no helper writes the lookup itself and every not-found text is unchanged.
+- **Done**, commit `af5a925`. `classNamed:as:side:` holds the lookup, the failure and the side
+  once; the role argument names what the name stood for in the call, so `class not found`,
+  `superclass not found` and `source class not found` stay the texts they were.
+  `classNamed:`, `classNamed:as:` and `classNamed:side:` delegate to it and `packageNamed:`
+  does the same for a package. Three handler blocks that kept their body where the lookup was
+  gave it up to `listMethodsOn:side:` and `methodSourceOf:onClass:side:`. 309 tests pass.
+  Critics fall from 17 to 11.
+
+### 6.4 The schema boilerplate
+
+- Change: extract the JSON Schema shape every factory wrote by hand.
+- Done when: a factory names only what differs between it and the next one.
+- **Done**, commit `2014bd8`. `schemaWithProperties:required:` states the object shape once and
+  takes the properties as associations; `schemaPropertyOneOf:describedAs:` builds an enum
+  property and `schemaSideProperty` is the side argument itself, described once — the six tools
+  that each described it differently now say the same thing about it, which is what they always
+  meant. The handlers that read an optional argument into a temporary only to test it for nil
+  now use `ifNotNil:` with the argument. 309 tests pass. Critics stay at 11: what is left is
+  the conditional inside four handler blocks, which point 6 dissolves.
+
+### 6.5 `className` against `class_name` — not done
+
+The tools disagree on the spelling of the class argument: `class_name` in sixteen of them,
+`className` in `list_methods`, `method_source` and `class_definition`. Renaming either way is
+a break in the published tool surface, so the point was declined. The inconsistency stands and
+is deliberate.
+
+### 6.6 One class per tool
+
+- Test: `MCPPharoToolsTest >> testEveryToolIsItsOwnClass`, which holds every tool in
+  `allTools` to being an `MCPTool` subclass carrying no handler block.
+- Change: 22 `MCPTool` subclasses with `name`, `description`, `inputSchema`, `annotations` and
+  `execute:` as methods, migrated one tool at a time with the suite green.
+- Done when: the meta test passes and the factories answer instances.
+- **Done**, commits `f14a4b4` (the groundwork) and the migration commit that follows it.
+  `MCPTool >> call:`, which is all the request processor sends, answers by sending `execute:`;
+  a subclass overrides `execute:` and the tools built from a block answer through the block in
+  `MCPTool >> execute:` itself, so a client-registered tool still works. The schema builders
+  moved to `MCPTool`, where a tool class reaches them as `self`, and `readOnlyHints`,
+  `additiveHints` and `destructiveHints` answer the annotation dictionary a tool class returns
+  from `annotations`. `MCPTool` had to stop reading its own slots and send its accessors
+  instead: `missingRequiredArgumentsIn:`, `asDictionary`, `answersStructuredContent:` and
+  `inspectionSchema:` read nil slots on a subclass otherwise. The 22 factory selectors survive
+  and answer instances, because the running tests send them. The twenty-two new classes carry
+  the `Tools` tag. `testReportSchema`, `critiqueReportSchema` and the schema builders left on
+  `MCPPharoTools class` are deleted, the two output schemas now being methods of
+  `MCPRunTestsTool` and `MCPRunCriticsTool`. Three tests in `MCPPharoToolsRunningTest` sent
+  `tool handler value:`, which pinned the tool being a block holder rather than any fact about
+  `list_methods`; reported before the change and then sent `tool call:` instead, assertions
+  untouched. 310 tests pass. Critics on `MCPPharoTools` fall from 11 to 3 and on the whole
+  `PharoMCP` package to the same 3: the method count on `MCPPharoTools class` and the
+  complexity of `searchSource:inMethods:caseSensitive:` and `listPackagesMatching:`, which are
+  helpers, not tool plumbing.
