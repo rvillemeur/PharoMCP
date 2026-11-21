@@ -38,27 +38,15 @@ MCPPharoTools class >> classCommentTool [
 	^ (MCPTool
 		name: 'class_comment'
 		description: 'Get or set the comment (documentation) on a class. Omit the comment parameter to read; supply it to write.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'comment' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'New comment text. Omit to read the current comment.';
-					yourself);
-				yourself);
-			at: 'required' put: #('class_name');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class').
+				'comment' -> (self schemaPropertyOfType: 'string' describedAs: 'New comment text. Omit to read the current comment.') }
+			required: #('class_name'))
 		handler: [ :args |
-			| className comment |
-			className := args at: 'class_name'.
-			comment := args at: 'comment' ifAbsent: [ nil ].
-			comment
-				ifNil: [ self getClassComment: className ]
-				ifNotNil: [ self setClassComment: comment onClass: className ] ])
+			(args at: 'comment' ifAbsent: [ nil ])
+				ifNil: [ self getClassComment: (args at: 'class_name') ]
+				ifNotNil: [ :comment | self setClassComment: comment onClass: (args at: 'class_name') ] ])
 		title: 'Read or write a class comment';
 		additive;
 		yourself
@@ -70,16 +58,9 @@ MCPPharoTools class >> classDefinitionTool [
 	^ (MCPTool
 		name: 'class_definition'
 		description: 'Get the definition of a Pharo class including its superclass, instance variables, and package.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'className' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Exact name of the class';
-					yourself);
-				yourself);
-			at: 'required' put: #('className');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'className' -> (self schemaPropertyOfType: 'string' describedAs: 'Exact name of the class') }
+			required: #('className'))
 		handler: [ :args | (self classNamed: (args at: 'className')) definitionString ])
 		title: 'Show a class definition';
 		readOnly;
@@ -109,13 +90,9 @@ MCPPharoTools class >> classHierarchyTool [
 	^ (MCPTool
 		name: 'class_hierarchy'
 		description: 'Show superclass chain and direct subclasses of a class.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Name of the class'; yourself);
-				yourself);
-			at: 'required' put: #('class_name');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class') }
+			required: #('class_name'))
 		handler: [ :args | self classHierarchyOf: (args at: 'class_name') ])
 		title: 'Show a class hierarchy';
 		readOnly;
@@ -190,29 +167,13 @@ MCPPharoTools class >> compileMethodTool [
 	^ (MCPTool
 		name: 'compile_method'
 		description: 'Compile a method on a class. Returns the selector on success. Use side "class" for class-side methods. LF line endings are normalised automatically.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'source' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Full method source including selector';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Instance or class side. Defaults to instance.';
-					yourself);
-				at: 'protocol' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Protocol name. Defaults to ''as yet unclassified''.';
-					yourself);
-				yourself);
-			at: 'required' put: #('class_name' 'source');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class').
+				'source' -> (self schemaPropertyOfType: 'string' describedAs: 'Full method source including selector').
+				'side' -> self schemaSideProperty.
+				'protocol' -> (self schemaPropertyOfType: 'string' describedAs: 'Protocol name. Defaults to ''as yet unclassified''.') }
+			required: #('class_name' 'source'))
 		handler: [ :args |
 			self
 				compileMethod: (args at: 'source')
@@ -250,29 +211,17 @@ MCPPharoTools class >> createClassTool [
 	^ (MCPTool
 		name: 'class_create'
 		description: 'Create a new Pharo class. Fails if the class already exists. Use compile_method to add methods after creation.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the new class';
-					yourself);
-				at: 'superclass_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Superclass name. Defaults to Object.';
-					yourself);
-				at: 'instance_variables' put: (Dictionary new
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the new class').
+				'superclass_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Superclass name. Defaults to Object.').
+				'instance_variables' -> (Dictionary new
 					at: 'type' put: 'array';
 					at: 'items' put: (Dictionary new at: 'type' put: 'string'; yourself);
 					at: 'description' put: 'Instance variable names. Defaults to none.';
-					yourself);
-				at: 'package' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Package name, e.g. MyApp or MyApp-Core.';
-					yourself);
-				yourself);
-			at: 'required' put: #('class_name' 'package');
-			yourself)
+					yourself).
+				'package' -> (self schemaPropertyOfType: 'string' describedAs: 'Package name, e.g. MyApp or MyApp-Core.') }
+			required: #('class_name' 'package'))
 		handler: [ :args |
 			self
 				createClass: (args at: 'class_name')
@@ -299,16 +248,9 @@ MCPPharoTools class >> createPackageTool [
 	^ (MCPTool
 		name: 'package_create'
 		description: 'Create a new package in the image. Fails if a package with that name already exists.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'package' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Package name, e.g. MyApp or MyApp-Core';
-					yourself);
-				yourself);
-			at: 'required' put: #('package');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'package' -> (self schemaPropertyOfType: 'string' describedAs: 'Package name, e.g. MyApp or MyApp-Core') }
+			required: #('package'))
 		handler: [ :args | self createPackage: (args at: 'package') ])
 		title: 'Create a package';
 		additive;
@@ -394,25 +336,12 @@ MCPPharoTools class >> deleteMethodTool [
 	^ (MCPTool
 		name: 'delete_method'
 		description: 'Remove a method from a class. Use side "class" for class-side methods. Cannot be undone — verify the selector before calling.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'selector' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Method selector to remove (e.g. "printOn:" or "add:").';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Instance or class side. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #('class_name' 'selector');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class').
+				'selector' -> (self schemaPropertyOfType: 'string' describedAs: 'Method selector to remove (e.g. "printOn:" or "add:").').
+				'side' -> self schemaSideProperty }
+			required: #('class_name' 'selector'))
 		handler: [ :args |
 			self
 				deleteMethod: (args at: 'selector')
@@ -429,16 +358,9 @@ MCPPharoTools class >> evaluateTool [
 	^ (MCPTool
 		name: 'evaluate_pharo'
 		description: 'Evaluate Pharo Smalltalk code and return the result as a string. Supports any valid Pharo expression or sequence of statements.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'code' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Pharo Smalltalk code to evaluate';
-					yourself);
-				yourself);
-			at: 'required' put: #('code');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'code' -> (self schemaPropertyOfType: 'string' describedAs: 'Pharo Smalltalk code to evaluate') }
+			required: #('code'))
 		handler: [ :args |
 			"No handler here: the request processor catches the error and marks the
 			 tool result as a failure, which a handler returning a string cannot do."
@@ -467,13 +389,9 @@ MCPPharoTools class >> findImplementorsTool [
 	^ (MCPTool
 		name: 'find_implementors'
 		description: 'Find all classes that implement a given method selector.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'selector' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Method selector to search for (e.g. printOn:)'; yourself);
-				yourself);
-			at: 'required' put: #('selector');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'selector' -> (self schemaPropertyOfType: 'string' describedAs: 'Method selector to search for (e.g. printOn:)') }
+			required: #('selector'))
 		handler: [ :args | self findImplementorsOf: (args at: 'selector') ])
 		title: 'Find the implementors of a selector';
 		readOnly;
@@ -502,13 +420,9 @@ MCPPharoTools class >> findSendersTool [
 	^ (MCPTool
 		name: 'find_senders'
 		description: 'Find all methods that send a given message selector. Returns ClassName >> #selector per sender, capped at 100.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'selector' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Message selector to search for (e.g. printString)'; yourself);
-				yourself);
-			at: 'required' put: #('selector');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'selector' -> (self schemaPropertyOfType: 'string' describedAs: 'Message selector to search for (e.g. printString)') }
+			required: #('selector'))
 		handler: [ :args | self findSendersOf: (args at: 'selector') ])
 		title: 'Find the senders of a selector';
 		readOnly;
@@ -628,19 +542,13 @@ MCPPharoTools class >> listClassesMatching: pattern [
 
 { #category : 'tools' }
 MCPPharoTools class >> listClassesTool [
+
 	^ (MCPTool
 		name: 'list_classes'
 		description: 'Search for classes in the Pharo image by name pattern. Returns up to 50 matching class names.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'pattern' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Substring to search for in class names (case-insensitive). Required — the image has thousands of classes.';
-					yourself);
-				yourself);
-			at: 'required' put: #('pattern');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'pattern' -> (self schemaPropertyOfType: 'string' describedAs: 'Substring to search for in class names (case-insensitive). Required — the image has thousands of classes.') }
+			required: #('pattern'))
 		handler: [ :args |
 			| pattern |
 			pattern := args at: 'pattern' ifAbsent: [ '' ].
@@ -673,21 +581,11 @@ MCPPharoTools class >> listMethodsTool [
 	^ (MCPTool
 		name: 'list_methods'
 		description: 'List all methods defined on a class with their protocol. Use side "class" for class-side methods.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'className' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Whether to list instance-side or class-side methods. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #('className');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'className' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class').
+				'side' -> self schemaSideProperty }
+			required: #('className'))
 		handler: [ :args |
 			self
 				listMethodsOn: (args at: 'className')
@@ -731,16 +629,13 @@ MCPPharoTools class >> listPackagesMatching: pattern [
 
 { #category : 'tools' }
 MCPPharoTools class >> listPackagesTool [
+
 	^ (MCPTool
 		name: 'list_packages'
 		description: 'List packages in the image with class and test class counts. Optionally filter by name pattern.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'pattern' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Optional substring to filter package names (case-insensitive)'; yourself);
-				yourself);
-			at: 'required' put: #();
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'pattern' -> (self schemaPropertyOfType: 'string' describedAs: 'Optional substring to filter package names (case-insensitive)') }
+			required: #())
 		handler: [ :args |
 			self listPackagesMatching: (args at: 'pattern' ifAbsent: [ nil ]) ])
 		title: 'List packages';
@@ -785,25 +680,12 @@ MCPPharoTools class >> methodSourceTool [
 	^ (MCPTool
 		name: 'method_source'
 		description: 'Get the source code of a method. Use side "class" for class-side methods, "instance" for instance-side methods.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'className' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class';
-					yourself);
-				at: 'methodName' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Selector of the method (e.g. "add:" or "printOn:")';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #( 'instance' 'class' );
-					at: 'description' put: 'Whether to look on the instance side or class side. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #( 'className' 'methodName' );
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'className' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class').
+				'methodName' -> (self schemaPropertyOfType: 'string' describedAs: 'Selector of the method (e.g. "add:" or "printOn:")').
+				'side' -> self schemaSideProperty }
+			required: #( 'className' 'methodName' ))
 		handler: [ :args |
 			self
 				methodSourceOf: (args at: 'methodName')
@@ -844,29 +726,13 @@ MCPPharoTools class >> moveMethodTool [
 	^ (MCPTool
 		name: 'method_move'
 		description: 'Move a method from one class to another, preserving source and protocol. Fails if the target class already defines the selector.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Source class name';
-					yourself);
-				at: 'selector' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Selector to move';
-					yourself);
-				at: 'target_class' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Destination class name';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Instance or class side. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #('class_name' 'selector' 'target_class');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Source class name').
+				'selector' -> (self schemaPropertyOfType: 'string' describedAs: 'Selector to move').
+				'target_class' -> (self schemaPropertyOfType: 'string' describedAs: 'Destination class name').
+				'side' -> self schemaSideProperty }
+			required: #('class_name' 'selector' 'target_class'))
 		handler: [ :args |
 			self
 				moveMethod: (args at: 'selector')
@@ -908,16 +774,9 @@ MCPPharoTools class >> removeClassTool [
 	^ (MCPTool
 		name: 'class_remove'
 		description: 'Remove a class from the image. Fails if the class has subclasses. Cannot be undone — verify the class name before calling.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class to remove';
-					yourself);
-				yourself);
-			at: 'required' put: #('class_name');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class to remove') }
+			required: #('class_name'))
 		handler: [ :args | self removeClass: (args at: 'class_name') ])
 		title: 'Remove a class';
 		destructive;
@@ -941,16 +800,9 @@ MCPPharoTools class >> removePackageTool [
 	^ (MCPTool
 		name: 'package_remove'
 		description: 'Remove an empty package from the image. Fails if the package still contains classes — remove or move them first.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'package' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Package name to remove';
-					yourself);
-				yourself);
-			at: 'required' put: #('package');
-			yourself)
+		schema: (self
+			schemaWithProperties: { 'package' -> (self schemaPropertyOfType: 'string' describedAs: 'Package name to remove') }
+			required: #('package'))
 		handler: [ :args | self removePackage: (args at: 'package') ])
 		title: 'Remove a package';
 		destructive;
@@ -977,20 +829,11 @@ MCPPharoTools class >> renameClassTool [
 	^ (MCPTool
 		name: 'class_rename'
 		description: 'Rename a class in the image. Does not auto-update references in method source — use search_source after renaming to find callers that need updating.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'old_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Current class name';
-					yourself);
-				at: 'new_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'New class name. Must not already exist.';
-					yourself);
-				yourself);
-			at: 'required' put: #('old_name' 'new_name');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'old_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Current class name').
+				'new_name' -> (self schemaPropertyOfType: 'string' describedAs: 'New class name. Must not already exist.') }
+			required: #('old_name' 'new_name'))
 		handler: [ :args |
 			self renameClass: (args at: 'old_name') to: (args at: 'new_name') ])
 		title: 'Rename a class';
@@ -1028,29 +871,13 @@ MCPPharoTools class >> renameMethodTool [
 	^ (MCPTool
 		name: 'method_rename'
 		description: 'Rename a method selector on a class. Rewrites the method source and removes the old selector. Does NOT auto-update senders — use find_senders after renaming to locate callers that need updating.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Name of the class that defines the method';
-					yourself);
-				at: 'old_selector' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Current selector to rename';
-					yourself);
-				at: 'new_selector' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'New selector. Must have the same number of arguments.';
-					yourself);
-				at: 'side' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'enum' put: #('instance' 'class');
-					at: 'description' put: 'Instance or class side. Defaults to instance.';
-					yourself);
-				yourself);
-			at: 'required' put: #('class_name' 'old_selector' 'new_selector');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Name of the class that defines the method').
+				'old_selector' -> (self schemaPropertyOfType: 'string' describedAs: 'Current selector to rename').
+				'new_selector' -> (self schemaPropertyOfType: 'string' describedAs: 'New selector. Must have the same number of arguments.').
+				'side' -> self schemaSideProperty }
+			required: #('class_name' 'old_selector' 'new_selector'))
 		handler: [ :args |
 			self
 				renameMethod: (args at: 'old_selector')
@@ -1105,21 +932,18 @@ MCPPharoTools class >> runCriticsTool [
 	^ (MCPTool
 		name: 'run_critics'
 		description: 'Run Renraku code critics on a class or all classes in a package. Returns rule violations with descriptions.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Class to critique. Required unless package given.'; yourself);
-				at: 'package' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Package name — critiques all classes. Overrides class_name.'; yourself);
-				yourself);
-			at: 'required' put: #();
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Class to critique. Required unless package given.').
+				'package' -> (self schemaPropertyOfType: 'string' describedAs: 'Package name — critiques all classes. Overrides class_name.') }
+			required: #())
 		handler: [ :args |
-			| pkg cls |
-			pkg := args at: 'package' ifAbsent: [ nil ].
-			cls := args at: 'class_name' ifAbsent: [ nil ].
-			pkg ifNotNil: [ self runCriticsOnPackage: pkg ]
-			ifNil: [ cls ifNil: [ MCPToolError signal: 'provide class_name or package' ]
-				ifNotNil: [ self runCriticsOnClass: cls ] ] ])
+			(args at: 'package' ifAbsent: [ nil ])
+				ifNotNil: [ :package | self runCriticsOnPackage: package ]
+				ifNil: [
+					(args at: 'class_name' ifAbsent: [ nil ])
+						ifNil: [ MCPToolError signal: 'provide class_name or package' ]
+						ifNotNil: [ :className | self runCriticsOnClass: className ] ] ])
 		title: 'Run the code critics';
 		outputSchema: self critiqueReportSchema;
 		readOnly;
@@ -1165,26 +989,22 @@ MCPPharoTools class >> runTestsTool [
 	^ (MCPTool
 		name: 'run_tests'
 		description: 'Run a TestCase subclass, a single test method, or all TestCase subclasses in a package. Returns pass/fail/error counts and failure messages.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'class_name' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'TestCase subclass name. Required unless package is given.'; yourself);
-				at: 'selector' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Single test method selector. Omit to run all tests.'; yourself);
-				at: 'package' put: (Dictionary new at: 'type' put: 'string'; at: 'description' put: 'Package name — runs all TestCase subclasses. Overrides class_name.'; yourself);
-				yourself);
-			at: 'required' put: #();
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'TestCase subclass name. Required unless package is given.').
+				'selector' -> (self schemaPropertyOfType: 'string' describedAs: 'Single test method selector. Omit to run all tests.').
+				'package' -> (self schemaPropertyOfType: 'string' describedAs: 'Package name — runs all TestCase subclasses. Overrides class_name.') }
+			required: #())
 		handler: [ :args |
-			| className selector package |
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			selector := args at: 'selector' ifAbsent: [ nil ].
-			package := args at: 'package' ifAbsent: [ nil ].
-			package
-				ifNotNil: [ self runTestsInPackage: package ]
+			(args at: 'package' ifAbsent: [ nil ])
+				ifNotNil: [ :package | self runTestsInPackage: package ]
 				ifNil: [
-					className
+					(args at: 'class_name' ifAbsent: [ nil ])
 						ifNil: [ MCPToolError signal: 'provide class_name or package' ]
-						ifNotNil: [ self runTestsForClass: className selector: selector ] ] ])
+						ifNotNil: [ :className |
+							self
+								runTestsForClass: className
+								selector: (args at: 'selector' ifAbsent: [ nil ]) ] ] ])
 		title: 'Run tests';
 		outputSchema: self testReportSchema;
 		additive;
@@ -1213,6 +1033,37 @@ MCPPharoTools class >> schemaPropertyOfType: aTypeName describedAs: aDescription
 	^ Dictionary new
 		at: 'type' put: aTypeName;
 		at: 'description' put: aDescription;
+		yourself
+]
+
+{ #category : 'schemas' }
+MCPPharoTools class >> schemaPropertyOneOf: allowedValues describedAs: aDescription [
+
+	^ Dictionary new
+		at: 'type' put: 'string';
+		at: 'enum' put: allowedValues;
+		at: 'description' put: aDescription;
+		yourself
+]
+
+{ #category : 'schemas' }
+MCPPharoTools class >> schemaSideProperty [
+
+	"The side argument six tools take. It means the same in each of them, so it reads the same."
+	^ self
+		schemaPropertyOneOf: #( 'instance' 'class' )
+		describedAs: 'Whether the method is on the instance side or the class side. Defaults to instance.'
+]
+
+{ #category : 'schemas' }
+MCPPharoTools class >> schemaWithProperties: propertyAssociations required: requiredNames [
+
+	"The JSON Schema shape every tool declares. A factory states the properties it takes and the
+	 names a call must carry, and nothing else."
+	^ Dictionary new
+		at: 'type' put: 'object';
+		at: 'properties' put: propertyAssociations asDictionary;
+		at: 'required' put: requiredNames;
 		yourself
 ]
 
@@ -1256,39 +1107,22 @@ MCPPharoTools class >> searchSourceTool [
 	^ (MCPTool
 		name: 'search_source'
 		description: 'Search method source code for a text pattern across a class or package. Returns matching method names with the first matching line. Use for finding string literals, comments, or any text that find_implementors/find_senders cannot locate.'
-		schema: (Dictionary new
-			at: 'type' put: 'object';
-			at: 'properties' put: (Dictionary new
-				at: 'pattern' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Text to search for in method source code';
-					yourself);
-				at: 'class_name' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Search methods of this class (instance + class side). Required unless package given.';
-					yourself);
-				at: 'package' put: (Dictionary new
-					at: 'type' put: 'string';
-					at: 'description' put: 'Search all methods in this package. Overrides class_name.';
-					yourself);
-				at: 'case_sensitive' put: (Dictionary new
-					at: 'type' put: 'boolean';
-					at: 'description' put: 'Case-sensitive match. Defaults to false.';
-					yourself);
-				yourself);
-			at: 'required' put: #('pattern');
-			yourself)
+		schema: (self
+			schemaWithProperties: {
+				'pattern' -> (self schemaPropertyOfType: 'string' describedAs: 'Text to search for in method source code').
+				'class_name' -> (self schemaPropertyOfType: 'string' describedAs: 'Search methods of this class (instance + class side). Required unless package given.').
+				'package' -> (self schemaPropertyOfType: 'string' describedAs: 'Search all methods in this package. Overrides class_name.').
+				'case_sensitive' -> (self schemaPropertyOfType: 'boolean' describedAs: 'Case-sensitive match. Defaults to false.') }
+			required: #('pattern'))
 		handler: [ :args |
-			| pattern className package cs |
+			| pattern cs |
 			pattern := args at: 'pattern'.
-			className := args at: 'class_name' ifAbsent: [ nil ].
-			package := args at: 'package' ifAbsent: [ nil ].
 			cs := args at: 'case_sensitive' ifAbsent: [ false ].
-			package
-				ifNotNil: [ self searchSourceFor: pattern inPackage: package caseSensitive: cs ]
+			(args at: 'package' ifAbsent: [ nil ])
+				ifNotNil: [ :package | self searchSourceFor: pattern inPackage: package caseSensitive: cs ]
 				ifNil: [
-					className
-						ifNotNil: [ self searchSourceFor: pattern inClass: className caseSensitive: cs ]
+					(args at: 'class_name' ifAbsent: [ nil ])
+						ifNotNil: [ :className | self searchSourceFor: pattern inClass: className caseSensitive: cs ]
 						ifNil: [ MCPToolError signal: 'provide class_name or package' ] ] ])
 		title: 'Search method source';
 		readOnly;
