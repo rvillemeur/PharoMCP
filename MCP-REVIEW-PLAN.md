@@ -455,3 +455,71 @@ is deliberate.
   `PharoMCP` package to the same 3: the method count on `MCPPharoTools class` and the
   complexity of `searchSource:inMethods:caseSensitive:` and `listPackagesMatching:`, which are
   helpers, not tool plumbing.
+
+## Phase 7 — what Phase 6 left behind
+
+Four leftovers were named after Phase 6 and taken in order. A fifth, the GET endpoint with an
+SSE stream, stays open and is not part of this phase.
+
+### 7.1 The documents that still described the old shape
+
+`README.md` said the project requires Pharo 10 or 11. It was developed on Pharo 13 and runs on
+Pharo 14 builds, and the inspector views need the presenter builder Pharo 13 introduced, so both
+places now say Pharo 13 or later. Option C told a reader to file in four `.class.st` files by
+hand; every tool is a class of its own now, so that leaves an image which cannot answer
+`tools/list`. Option C says to use the baseline instead. `CLAUDE.md` describes `MCPTool` as the
+superclass of the twenty-two tool classes in the `Tools` tag, `MCPPharoTools` as the factories
+and the helpers, and names all three steps for adding a tool. **Done**, commit `446d2fc`.
+
+### 7.2 What MuTalk says about the tool classes
+
+The checkout was clean first, and `classesToMutate` held `MCPTool` and its twenty-two subclasses
+and nothing else. Before the new tests: 659 mutants on `MCPTool`, score 36; 2128 mutants on the
+tool classes, score 36. The alive mutants sat in `inputSchema` (455), `outputSchema` (409),
+`execute:` (280), `critiqueArraySchema` (152), `title` and `description` (44 each) and `name`
+(6) — the declared surface was almost entirely unpinned. After 7.3: 43 for `MCPTool` and 62 for
+the tool classes. What stays alive is description prose, which only a copy of the text in a test
+would kill, and the error branches of `execute:` that the running tests already reach by another
+route. **Done.**
+
+A mutation run leaves the image dirty when a mutant kills a test in the middle of its body: both
+`TestCreateMCPXYZ` and `MCPSandboxPlain` were found afterwards, the second moved to the
+unpackaged package by its own tearDown. Checked after each run and removed; the working copy is
+clean. `MCPToolArgumentDefaultsTest >> tearDown` now also removes anything left under its own
+class-name prefix, because removing a package moves a class it still holds instead of deleting
+it.
+
+### 7.3 The tests one class per tool was supposed to make cheap
+
+- Test: `MCPToolSurfaceTest`, 16 tests over a written-out table of the published surface, and
+  `MCPToolArgumentDefaultsTest`, 15 tests that call each tool through `call:` for the arguments
+  the schema marks optional.
+- Done when: both pass, the suite passes, critics are clean on both, and the mutation score
+  rises.
+- **Done**, commit `d30b2c7`. The surface table is written out rather than read from the tools:
+  a difference between it and the image is a change every client sees, which is the whole point
+  of pinning it. It holds each tool name, its required and optional arguments, the keys of the
+  structured answer the two reporting tools give and the rows inside those arrays, plus the
+  shape of a tool class — an `execute:` of its own, a title that is not the name, the four
+  annotation hints, and the `Tools` tag. The defaults test pins what a missing optional argument
+  means: the instance side in all six tools that take `side`, `Object` and no instance variables
+  for a new class, `as yet unclassified` for a compiled method, a case-insensitive search, and
+  `package` winning over `class_name` in `search_source`, which signals when it gets neither. It
+  builds a scratch package in `setUp` and removes it in `tearDown`, so nothing it creates
+  reaches a repository package. 341 tests pass.
+
+### 7.4 An example and a view for the tool classes
+
+- Change: `MCPTool class >> inspectorToolClasses:`, a Tool classes table with one row per
+  subclass — its tool name, its required arguments, whether it answers its own `execute:` and
+  whether it declares an output schema — and `MCPToolExamples class >> toolWithAlternativeArguments`,
+  which answers `search_source`, the one tool whose `execute:` branches.
+- Done when: `MCPConventionTest` holds the new view like every other, with `MCPTool class`
+  registered as a subject.
+- **Done**, commit `d30b2c7`. Twenty-two `<Subject>Examples` classes and twenty-two views were
+  considered and refused: each tool class would get an example that only calls the factory and a
+  view identical to the two `MCPTool` already declares, which is noise, not documentation. The
+  family view on the class side is what a reader of this hierarchy actually wants, and it is
+  where the project keeps a view that explains a rule the whole hierarchy follows. Every row is
+  read off the class itself, so a tool class that forgets one of them shows an empty cell rather
+  than a wrong one.
