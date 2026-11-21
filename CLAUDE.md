@@ -30,7 +30,7 @@ over HTTP, ZnServer delegate pattern.
 |---|---|
 | `PharoMCP` | Production code, 55 classes, of which 22 are the tool classes in the `Tools` tag |
 | `PharoMCP-Examples` | One `<Subject>Examples` class per subject, holding the `<sampleInstance>` examples the inspector views and the tests read |
-| `PharoMCP-Tests` | 341 tests over fourteen test classes, all pass |
+| `PharoMCP-Tests` | 359 tests over fourteen test classes, all pass |
 
 Baseline groups: `default` (the server alone), `examples`, `tests`, `dev` (tests and MuTalk,
 pinned to the release tag `v3.0.8`, never `master`).
@@ -106,7 +106,7 @@ MCPToolArgumentDefaultsTest suite run. "15 tests"
 MCPPharoToolsTest suite run.          "16 tests"
 MCPLogEntryTest suite run.            "13 tests"
 MCPConventionTest suite run.          "12 tests"
-MCPToolTest suite run.                 "9 tests"
+MCPToolTest suite run.                "27 tests"
 MCPNullLoggerTest suite run.           "5 tests"
 MCPLogEntryPresenterTest suite run.    "4 tests"
 ```
