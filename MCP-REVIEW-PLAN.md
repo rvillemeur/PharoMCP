@@ -217,6 +217,13 @@ default, and the README explains which to turn on in which deployment.
 - Change: `default`, `tests`, `examples` and `dev` (MuTalk) groups in
   `BaselineOfPharoMCP`, and the examples package declared.
 - Done when: the test passes and `Metacello … load: 'default'` loads no test package.
+- **Done.** The baseline declares `PharoMCP-Examples` and the four groups. `default` is the
+  server package alone, held by `testDefaultGroupLoadsNoTestPackage`; `PharoMCP-Tests`
+  requires the examples package, because the test classes read the examples, so `tests` loads
+  both. `dev` adds MuTalk pinned to tag `v3.0.8`, not `master`, so a mutation score measured
+  today can be measured again against the same mutant operators. The examples package was
+  also missing from the Iceberg working copy, so 4.1 had committed none of its source; adding
+  it is part of the same commit.
 
 ### 4.4 Convention meta tests
 
@@ -225,6 +232,15 @@ default, and the README explains which to turn on in which deployment.
   selector taking the builder, and the protocol revision strings confined to the constants
   method.
 - Done when: the class is green and fails when any rule is broken on purpose.
+- **Done.** Seven tests: class comments present and free of line feeds, examples class-side
+  and unary and in the examples package, examples rebuilding their object on every call,
+  inspector views keyword selectors taking the builder, revision strings confined to
+  `supportedProtocolVersions` and `assumedProtocolVersion`, and the baseline's packages and
+  groups. Each rule was broken on purpose and seen to fail: a line feed in a class comment, a
+  keyword `<sampleInstance>` method, a unary inspector view, and a revision string written
+  inline; all four were reverted and the class is green again. The rebuild test is also what
+  references the five example classes, so `ReClassNotReferencedRule` is quiet without a
+  registry method.
 
 ### 4.5 Inspector views where they pay
 
