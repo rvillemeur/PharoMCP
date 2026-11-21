@@ -134,6 +134,17 @@ MCPRequestProcessorTest >> testParseErrorReturns32700 [
 	self assert: (error at: 'code') equals: -32700
 ]
 
+{ #category : 'tests - ping' }
+MCPRequestProcessorTest >> testPingAnswersEmptyResult [
+
+	| response result |
+	response := processor processRawRequest: (self request: 'ping' id: 7 params: Dictionary new).
+	result := self parse: response.
+	self assert: (result at: 'id') equals: 7.
+	self deny: (result includesKey: 'error').
+	self assert: (result at: 'result') isEmpty
+]
+
 { #category : 'tests' }
 MCPRequestProcessorTest >> testResponseIsValidJson [
 

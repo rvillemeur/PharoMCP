@@ -37,21 +37,20 @@ MCPRequestProcessor class >> supportedProtocolVersions [
 	^ #( '2025-11-25' '2025-06-18' '2025-03-26' '2024-11-05' )
 ]
 
-{ #category : 'processing' }
+{ #category : 'handling' }
 MCPRequestProcessor >> dispatchRequest: request [
+
 	| method id params |
 	id := request at: 'id' ifAbsent: [ nil ].
 	method := request at: 'method' ifAbsent: [
 		^ self errorResponseWithId: id code: -32600 message: 'Invalid Request' ].
 	params := request at: 'params' ifAbsent: [ Dictionary new ].
-
 	"Notifications have no id — no response per JSON-RPC 2.0"
 	(id isNil and: [ method beginsWith: 'notifications/' ]) ifTrue: [ ^ nil ].
-
 	method = 'initialize' ifTrue: [ ^ self handleInitialize: params id: id ].
+	method = 'ping' ifTrue: [ ^ self handlePing: id ].
 	method = 'tools/list' ifTrue: [ ^ self handleToolsList: params id: id ].
 	method = 'tools/call' ifTrue: [ ^ self handleToolsCall: params id: id ].
-
 	^ self errorResponseWithId: id code: -32601 message: 'Method not found: ' , method
 ]
 
@@ -82,6 +81,15 @@ MCPRequestProcessor >> handleInitialize: params id: id [
 				yourself);
 			yourself)
 		id: id
+]
+
+{ #category : 'handling' }
+MCPRequestProcessor >> handlePing: id [
+
+	"A client that pings for liveness and gets an error back may treat the connection as dead,
+	 so the specification makes an empty result a MUST here."
+
+	^ self successResponseWithResult: Dictionary new id: id
 ]
 
 { #category : 'handlers' }
