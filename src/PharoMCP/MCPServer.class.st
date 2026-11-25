@@ -397,15 +397,20 @@ MCPServer >> safeProcess: body [
 				yourself) ]
 ]
 
-{ #category : 'controlling' }
+{ #category : 'running' }
 MCPServer >> start [
 
+	"Register before the running check, so a start sent to an already running server still
+	 names it as the current one: the window and every other reader resolve the server
+	 through #PharoMCPServer, and a server that runs unregistered reads as stopped."
+
+	Smalltalk at: #PharoMCPServer put: self.
 	self isRunning ifTrue: [ ^ self ].
 	httpServer := ZnServer on: port.
 	bindingAddress ifNotNil: [ :address | httpServer bindingAddress: address ].
 	httpServer delegate: self.
 	httpServer start.
-	Transcript show: 'PharoMCP running on http://localhost:',  port printString; cr.
+	Transcript show: 'PharoMCP running on http://localhost:', port printString; cr.
 	announcer announce: MCPServerStarted new
 ]
 
@@ -416,12 +421,16 @@ MCPServer >> startLogging [
 	announcer announce: MCPLoggingStarted new
 ]
 
-{ #category : 'control' }
+{ #category : 'running' }
 MCPServer >> stop [
+
 	| s |
 	s := httpServer.
 	httpServer := nil.
 	s ifNotNil: [ s stop ].
+	"Forget only our own registration: another server may have taken the name since."
+	(Smalltalk at: #PharoMCPServer ifAbsent: [ nil ]) == self ifTrue: [
+		Smalltalk globals removeKey: #PharoMCPServer ifAbsent: [ ] ].
 	Transcript show: 'PharoMCP stopped'; cr.
 	announcer announce: MCPServerStopped new
 ]

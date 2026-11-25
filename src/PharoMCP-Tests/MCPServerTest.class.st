@@ -51,6 +51,20 @@ MCPServerTest >> postRequestWithProtocolVersion: aStringOrNil [
 	^ request
 ]
 
+{ #category : 'private' }
+MCPServerTest >> rememberCurrentServer [
+
+	^ Smalltalk at: #PharoMCPServer ifAbsent: [ nil ]
+]
+
+{ #category : 'private' }
+MCPServerTest >> restoreCurrentServer: aServerOrNil [
+
+	aServerOrNil
+		ifNil: [ Smalltalk globals removeKey: #PharoMCPServer ifAbsent: [ ] ]
+		ifNotNil: [ :aServer | Smalltalk at: #PharoMCPServer put: aServer ]
+]
+
 { #category : 'running' }
 MCPServerTest >> setUp [
 	super setUp.
@@ -99,6 +113,19 @@ MCPServerTest >> testBuildResponseForStringReturnsJsonResponse [
 	response := server buildResponseFor: '{"result":42}'.
 	self assert: response statusLine code equals: 200.
 	self assert: response entity contentType equals: ZnMimeType applicationJson
+]
+
+{ #category : 'tests - registry' }
+MCPServerTest >> testCurrentAnswersARunningServerWhileOneRuns [
+
+	"The window reads MCPServer current. While a server runs, current must answer a running
+	 server, never a fresh one that reports itself stopped."
+
+	| previous |
+	previous := self rememberCurrentServer.
+	[ server start.
+	  self assert: MCPServer current isRunning ]
+		ensure: [ self restoreCurrentServer: previous ]
 ]
 
 { #category : 'tests' }
@@ -328,6 +355,28 @@ MCPServerTest >> testStartAndStop [
 	self assert: server isRunning.
 	server stop.
 	self deny: server isRunning
+]
+
+{ #category : 'tests - registry' }
+MCPServerTest >> testStartRegistersTheServerAsCurrent [
+
+	| previous |
+	previous := self rememberCurrentServer.
+	[ server start.
+	  self assert: MCPServer current identicalTo: server ]
+		ensure: [ self restoreCurrentServer: previous ]
+]
+
+{ #category : 'tests - registry' }
+MCPServerTest >> testStopForgetsTheServerItRegistered [
+
+	| previous |
+	previous := self rememberCurrentServer.
+	[ server start.
+	  self assert: (Smalltalk at: #PharoMCPServer) identicalTo: server.
+	  server stop.
+	  self deny: (Smalltalk includesKey: #PharoMCPServer) ]
+		ensure: [ self restoreCurrentServer: previous ]
 ]
 
 { #category : 'tests - protocol version' }

@@ -25,9 +25,8 @@ Class {
 
 { #category : 'instance creation' }
 MCPServerPresenter class >> open [
-	^ self openWithServer: (Smalltalk
-		at: #PharoMCPServer
-		ifAbsent: [ MCPServer default ])
+
+	^ self openWithServer: MCPServer current
 ]
 
 { #category : 'instance creation' }
